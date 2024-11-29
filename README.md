@@ -6,7 +6,7 @@ First, download the files for this app by doing the following:
 
 -   Click the `<> Code` button in this repository
 -   Then on the dropdown, click `Download ZIP`
--   Once downloaded, unzip the downloaded .zip file
+-   Once downloaded, unzip the file (probably named `Turing-LLM-Explorer-main.zip`)
 
 To use the interface (front-end):
 
