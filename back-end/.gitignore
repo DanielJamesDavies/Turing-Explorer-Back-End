@@ -1,5 +1,6 @@
 **/__pycache__/
 wsl_open_dir.bat
+venv
 
 TuringLLM/model_1722550239_03986.pt
 SAE/sae

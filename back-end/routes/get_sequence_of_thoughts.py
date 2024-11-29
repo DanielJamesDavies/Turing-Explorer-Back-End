@@ -60,7 +60,7 @@ def get_sequence_of_thoughts():
     turing_llm.clear()
     
     
-    latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth").cpu()
+    latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True).cpu()
     top_frequency_threshold = 2000000
     latents_sae_frequencies_mask = (latents_sae_frequencies < top_frequency_threshold).int()
     del latents_sae_frequencies
