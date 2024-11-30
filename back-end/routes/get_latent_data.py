@@ -5,6 +5,8 @@ import torch
 import h5py
 import pandas as pd
 from transformers import AutoTokenizer
+import pickle
+from concurrent.futures import ThreadPoolExecutor
 
 
 
@@ -179,6 +181,16 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
     sae_dim = 40960
     top_frequency_threshold = 2000000
     latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True).cpu()
+    
+    all_decoded_sequences = {}
+    def get_decoded_sequences(i):
+        with open(f"{latent_data_path}/decoded_sequences/layer_{i}.pkl", "rb") as f:
+            all_decoded_sequences[str(i)] = pickle.load(f)
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_decoded_sequences, i) for i in range(num_layers)]
+        for future in futures:
+            future.result()
+                
     for top_other_latents_h5_filename in top_other_latents_h5_filenames:
         top_other_latents[top_other_latents_h5_filename] = [False for _ in range(num_layers)]
         top_other_latents[top_other_latents_h5_filename + "_rare"] = [[False for _ in range(80)] for _ in range(num_layers)]
@@ -191,10 +203,14 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
                 top_other_latents[top_other_latents_h5_filename][layer_index], h5_file = get_top_other_latents_layer(top_other_latents_h5_filename, layer, latent, layer_index, 0, latent_data_path, other_latents_dir_list)
             top_other_latents[top_other_latents_h5_filename][layer_index] = top_other_latents[top_other_latents_h5_filename][layer_index] + (sae_dim / 2)
             top_other_latents[top_other_latents_h5_filename][layer_index] = top_other_latents[top_other_latents_h5_filename][layer_index].tolist()
+            top_other_latents[top_other_latents_h5_filename][layer_index] = [
+                [ { "latent": int(j), "topSequences": all_decoded_sequences[str(layer_index)][int(j*10):int(j*10)+2] } for j in latents_list]
+                for latents_list in top_other_latents[top_other_latents_h5_filename][layer_index]
+            ]
             
             for i in range(len(top_other_latents[top_other_latents_h5_filename][layer_index])):
-                def filterFunction(latent_index):
-                    if latents_sae_frequencies[layer_index][int(latent_index)] >= top_frequency_threshold:
+                def filterFunction(latent):
+                    if latents_sae_frequencies[layer_index][int(latent["latent"])] >= top_frequency_threshold:
                         return False
                     return True
                 top_other_latents[top_other_latents_h5_filename + "_rare"][layer_index][i] = list(filter(filterFunction, top_other_latents[top_other_latents_h5_filename][layer_index][i]))

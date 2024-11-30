@@ -58,6 +58,8 @@ export const TopSequencesListLogic = () => {
 	};
 
 	return {
+		latentLayer,
+		latentIndex,
 		latentTopSequencesCount,
 		topSequencesList,
 		topOtherLatents,

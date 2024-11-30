@@ -166,7 +166,7 @@
 	background: var(--colour-blue);
 }
 
-.latent-top-sequences-item-view-top-other-latents-btn {
+.latent-top-sequences-item-view-top-other-latent-btn {
 	padding: 8px;
 	border-radius: 100%;
 	background: var(--colour-black);
@@ -175,7 +175,7 @@
 	transition: 0.2s;
 }
 
-.latent-top-sequences-item-view-top-other-latents-btn:hover {
+.latent-top-sequences-item-view-top-other-latent-btn:hover {
 	background: var(--colour-white);
 	color: var(--colour-black);
 }
@@ -202,17 +202,19 @@
 }
 
 .latent-top-sequences-item-other-latents-container {
+	position: relative;
 	height: 0;
 	opacity: 0;
-	transition: 0.2s ease-out;
+	transition: 0.2s ease-in;
 	pointer-events: none;
-	overflow: hidden;
 }
 
 .latent-top-sequences-item-other-latents-container-show {
+	padding-bottom: 80px;
 	height: 100%;
 	opacity: 1;
 	pointer-events: all;
+	transition: opacity 0.2s ease-out;
 }
 
 .latent-top-sequences-item-other-latents-collection-type-container {
@@ -220,6 +222,7 @@
 	gap: 8px;
 	align-items: center;
 	margin-bottom: 24px;
+	color: var(--colour-grey-75);
 }
 
 .latent-top-sequences-item-other-latents-collection-type-title {
@@ -251,22 +254,78 @@
 }
 
 .latent-top-sequences-item-other-latents-layer {
+	position: relative;
 	display: flex;
-	gap: 12px;
+	gap: 64px;
 	align-items: center;
-	margin-bottom: 16px;
+	margin-bottom: 32px;
+	z-index: calc(12 - var(--layer-index));
+}
+
+.latent-top-sequences-item-other-latents-layer:hover {
+	z-index: 20;
 }
 
 .latent-top-sequences-item-other-latents-layer-title {
-	width: 70px;
+	flex-shrink: 0;
+	margin-top: 10px;
+	width: 76px;
+	text-transform: uppercase;
+	color: var(--colour-grey-50);
+	letter-spacing: 2px;
+	word-spacing: 4px;
+	font-size: 12px;
+	text-align: right;
 }
 
 .latent-top-sequences-item-other-latents-layer-sequences {
 	position: relative;
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: 18px;
 	align-items: center;
+}
+
+.inference-result-latents-latent-container button {
+	border-color: var(--colour-grey-40) !important;
+}
+
+.inference-result-latents-latent-container:hover button {
+	border-color: var(--colour-grey-70) !important;
+}
+
+.inference-result-latents-latent button span {
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	color: var(--colour-grey-65) !important;
+	text-shadow: 0 0 8px #000, 0 0 8px #000, 0 0 8px #000, 0 0 8px #000;
+	transition: 0.2s;
+}
+
+.inference-result-latents-latent-container:hover button span {
+	color: var(--colour-grey-90) !important;
+}
+
+@media (min-width: 1400px) {
+	.latent-top-sequences-item-other-latents-layer {
+		margin-bottom: 20px;
+	}
+
+	.latent-top-sequences-item-other-latents-layer-sequences {
+		gap: 24px 34px;
+	}
+
+	.latent-top-sequences-item-other-latents-layer-title {
+		margin-top: 0px;
+	}
+
+	.inference-result-latents-latent button span {
+		top: 50% !important;
+		left: 6.5px !important;
+		transform: translateY(-50%) !important;
+		text-shadow: 0 0 8px #000, 0 0 8px #000, 0 0 8px #000, 0 0 8px #000;
+	}
 }
 
 .latent-top-sequences-item-other-latents-layer-sequence {
@@ -310,6 +369,18 @@
 	border-color: var(--colour-white);
 }
 
+.latent-top-sequences-item-other-latents-layer .inference-result-latents-latent-preview {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.latent-top-sequences-item-other-latents-layer:hover
+	.latent-top-sequences-item-other-latent-container:hover
+	.inference-result-latents-latent-preview {
+	opacity: 1;
+	pointer-events: none;
+}
+
 .latent-top-sequences-item-other-latents-collection-type-toggle-hide-common-latents::before {
 	position: absolute;
 	top: 50%;
@@ -327,4 +398,35 @@
 .latent-top-sequences-item-other-latents-collection-type-toggle-hide-common-latents-active::before {
 	left: 26px;
 	background: var(--colour-white);
+}
+
+.latent-top-sequences-item-other-latents-layer .inference-result-latents-latent-preview {
+	z-index: 2;
+	left: -64px !important;
+	right: unset !important;
+}
+
+.latent-top-sequences-item-other-latents-layer-use-higher-preview .inference-result-latents-latent-preview {
+	top: unset !important;
+	bottom: 32px !important;
+}
+
+.latent-top-sequences-item-other-latents-label {
+	position: absolute;
+	bottom: 46px;
+	left: 140px;
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	color: var(--colour-grey-40);
+	transition: 0.2s;
+}
+
+.latent-top-sequences-item-other-latents-label:hover {
+	scale: 1.1;
+	color: var(--colour-grey-60);
+}
+
+.latent-top-sequences-item-other-latents-label span {
+	font-size: 14px;
 }
