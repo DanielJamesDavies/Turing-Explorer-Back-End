@@ -24,6 +24,6 @@ To run the logic (back-end):
 -   Download the following files and place them in their corresponding target locations:
     -   Turing-LLM-1.0-254M can be downloaded here: https://www.kaggle.com/models/danieljamesdavies/turing-llm-1.0-254m. Once downloaded, place `model_1722550239_03986.pt` in `back-end/TuringLLM/`.
     -   Sparse Autoencoders for All Turing-LLM Layers can be downloaded here: https://www.kaggle.com/datasets/danieljamesdavies/turing-llm-sparse-autoencoders. Once downloaded, place the folder `sae/` inside `back-end/SAE/`.
-    -   (We're in the process of uploading this dataset) Turing-LLM Explorer Latent Data can be downloaded here: https://www.kaggle.com/datasets/danieljamesdavies/turing-llm-explorer-latent-data. Once downloaded, place the folder `latent_data` in `/back-end`. Overwrite the original `latent_data` file if requested.
+    -   Turing-LLM Explorer Latent Data can be downloaded here: https://www.kaggle.com/datasets/danieljamesdavies/turing-llm-explorer-latent-data. Once downloaded, place the folder `latent_data` in `/back-end`. Overwrite the original `latent_data` file if requested.
 -   Navigate to `back-end/` in your terminal and type `pip install -r requirements.txt` to download the back-end's dependencies.
 -   Once installed, type `python app.py` (or `python3 app.py`) to run the app locally
