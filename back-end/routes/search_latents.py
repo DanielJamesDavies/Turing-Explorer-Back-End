@@ -6,6 +6,7 @@ import logging
 import torch
 from transformers import AutoTokenizer
 # from sentence_transformers import SentenceTransformer, util
+from concurrent.futures import ThreadPoolExecutor
 
 
 
@@ -57,10 +58,9 @@ def get_keyword_match_results(search_prompt, latent_data_path):
         if f"layer_{layer_index}.pkl" not in decoded_dir_list:
             print("Error: File \"decoded_sequences/layer_{layer_index}.pkl\" Not Found")
             return []
-
-    for layer_index in range(12):
+            
+    def search_layer_latents(layer_index, results):
         start_time = time.time()
-        print(f"Searching Layer {layer_index+1}...", end="\r")
         
         with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}.pkl", "rb") as f:
             decoded_sequences = pickle.load(f)
@@ -80,9 +80,18 @@ def get_keyword_match_results(search_prompt, latent_data_path):
             new_result = { "layer": layer_index, "latent": latent_index.item(), "relevance": search_words_frequencies[latent_index].item(), "topSequencePreviews": [] }
             new_result["topSequencePreviews"] = [{ "decoded": decoded_sequences[latent_index*10+top_sequence_index] } for top_sequence_index in range(4)]
             results.append(new_result)
-            
+        
         duration = time.time() - start_time
         print(f"Searched Layer {str(layer_index+1).zfill(len(str(12)))}  |  Duration: {duration:.2f}s  |  Top Latents: {', '.join([str(str(i.item() + 1) + ' (f' + str(search_words_frequencies[i].item()) + ')') for i in sorted_indices[:6]])}")
+        
+    print("Searching for Latents...", end="\r")
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(search_layer_latents, layer_index, results)
+            for layer_index in range(12)
+        ]
+        for future in futures:
+            future.result()    
         
     results = [result for result in results if result["relevance"] > 0]
         

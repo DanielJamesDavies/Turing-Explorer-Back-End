@@ -6,7 +6,6 @@ import torch
 import numpy as np
 import pickle
 from collections import Counter
-from SAE.SAE_TopK import SAE
 import time
 from concurrent.futures import ThreadPoolExecutor
 
