@@ -37,7 +37,7 @@ def inference():
             print(f"Running Turing-LLM...  | Tokens: {len(response_tokens)}", end="\r")
             if final is True:
                 print(f"Completed Running Turing-LLM  |  Tokens: {max_length}  |  Duration: {time.time()-start_time:2f}s")
-            yield json.dumps({ 'message': 'Success', 'first': i == 0, 'final': final, "inference_id": inference_id, "response_tokens": response_tokens, "response_tokens_decoded": response_tokens_decoded })
+            yield json.dumps({ 'message': 'Success', 'first': i == 0, 'final': final, "inference_id": inference_id, "response_tokens": response_tokens, "response_tokens_decoded": response_tokens_decoded }) + "<|END_OF_RESPONSE_CHUNK_12|>"
             i += 1
     
     return Response(generate(current_app.config["turing_llm"]), mimetype='application/json')
