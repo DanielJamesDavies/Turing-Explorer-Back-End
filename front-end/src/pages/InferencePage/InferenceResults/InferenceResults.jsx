@@ -18,7 +18,7 @@ import { LoadingCircle } from "../../../components/LoadingCircle/LoadingCircle";
 export const InferenceResults = () => {
 	const {
 		inferenceResults,
-		viewingInferenceResultIndex,
+		viewingInferenceResultId,
 		isViewingInferenceResult,
 		sequenceOfThoughtsTokenIndex,
 		sequenceOfThoughtsTopLatents,
@@ -48,7 +48,7 @@ export const InferenceResults = () => {
 							<div
 								key={inferenceResultIndex}
 								className='inference-results-item'
-								onClick={() => onClickResultsItem(inferenceResultIndex)}
+								onClick={() => onClickResultsItem(inferenceResult?.inference_id)}
 							>
 								<div className='inference-results-item-tokens'>
 									{inferenceResult?.tokens?.map((token, tokenIndex) => (
@@ -58,7 +58,7 @@ export const InferenceResults = () => {
 							</div>
 					  ))}
 			</div>
-			{viewingInferenceResultIndex === false ? null : (
+			{viewingInferenceResultId === false ? null : (
 				<div className='inference-result-container'>
 					<div className='inference-result'>
 						<button className='inference-result-back-btn' onClick={backToInferenceResults}>
@@ -66,15 +66,17 @@ export const InferenceResults = () => {
 							<span>Back to Inference Results</span>
 						</button>
 						<div className='inference-result-tokens'>
-							{inferenceResults[viewingInferenceResultIndex]?.tokens?.map((token, tokenIndex) => (
-								<span
-									key={tokenIndex}
-									onClick={() => onClickToken(tokenIndex)}
-									className={sequenceOfThoughtsTokenIndex === tokenIndex ? " inference-result-tokens-token-active" : ""}
-								>
-									<span>{token}</span>
-								</span>
-							))}
+							{inferenceResults
+								?.find((e) => e?.inference_id === viewingInferenceResultId)
+								?.tokens?.map((token, tokenIndex) => (
+									<span
+										key={tokenIndex}
+										onClick={() => onClickToken(tokenIndex)}
+										className={sequenceOfThoughtsTokenIndex === tokenIndex ? " inference-result-tokens-token-active" : ""}
+									>
+										<span>{token}</span>
+									</span>
+								))}
 						</div>
 						<div className='inference-result-latents-layers-container'>
 							{sequenceOfThoughtsTopLatents === false ? (

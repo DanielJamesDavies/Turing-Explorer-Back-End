@@ -9,17 +9,28 @@ const InferenceProvider = ({ children }) => {
 	const [inferenceTextBoxValue, setInferenceTextBoxValue] = useState("");
 	const [isGettingInferenceResults, setIsGettingInferenceResults] = useState(false);
 	const [inferenceResults, setInferenceResults] = useState(false);
-	const [viewingInferenceResultIndex, setViewingInferenceResultIndex] = useState(false);
+	const [viewingInferenceResultId, setViewingInferenceResultId] = useState(false);
 	const [isViewingInferenceResult, setIsViewingInferenceResult] = useState(false);
 	const location = useLocation();
 
 	const submitInferenceRequest = useCallback(async () => {
 		setIsGettingInferenceResults(true);
 		const newInferenceTextBoxValue = JSON.parse(JSON.stringify(inferenceTextBoxValue));
-		const res = await APIRequest("/inference", "POST", { prompt: newInferenceTextBoxValue });
-		setIsGettingInferenceResults(false);
-		setInferenceTextBoxValue("");
-		setInferenceResults((oldValue) => (oldValue || []).concat([{ tokenIds: res?.response_tokens, tokens: res?.response_tokens_decoded }]));
+		const handleStreamResponse = (res) => {
+			console.log(res);
+			if (res?.first) {
+				setIsGettingInferenceResults(false);
+				setInferenceTextBoxValue("");
+				setViewingInferenceResultId(res?.inference_id);
+				setIsViewingInferenceResult(true);
+			}
+			setInferenceResults((oldValue) =>
+				(oldValue || [])
+					?.filter((e) => e?.inference_id !== res?.inference_id)
+					.concat([{ inference_id: res?.inference_id, tokenIds: res?.response_tokens, tokens: res?.response_tokens_decoded }])
+			);
+		};
+		APIRequest("/inference", "POST", { prompt: newInferenceTextBoxValue }, handleStreamResponse);
 	}, [inferenceTextBoxValue]);
 
 	useEffect(() => {
@@ -38,8 +49,8 @@ const InferenceProvider = ({ children }) => {
 				inferenceResults,
 				setInferenceResults,
 				submitInferenceRequest,
-				viewingInferenceResultIndex,
-				setViewingInferenceResultIndex,
+				viewingInferenceResultId,
+				setViewingInferenceResultId,
 				isViewingInferenceResult,
 				setIsViewingInferenceResult,
 			}}

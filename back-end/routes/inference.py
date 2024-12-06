@@ -1,5 +1,8 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, Response
+import time
 import torch
+import json
+import uuid
 from TuringLLM.tokenizer import Tokenizer
 
 
@@ -18,16 +21,26 @@ def inference():
     tokens = tokenizer.encode(prompt)
     if len(tokens) > 1000:
         tokens = tokens[:1000]
-    max_length = len(tokens)+2+512
+    max_length = len(tokens)+2+(512 if current_app.config["device"] == "cuda" else 64)
     
     torch.cuda.empty_cache()
     
-    response_decoded, response_tokens, _ = current_app.config["turing_llm"].generate(tokens, max_length=max_length, tokenize=False)
-    response_tokens_decoded = get_top_sequences_list(response_decoded, response_tokens[2:], tokenizer)
+    inference_id = str(uuid.uuid4())
     
-    torch.cuda.empty_cache()
+    print("Running Turing-LLM...", end="\r")
+    start_time = time.time()
+    def generate(turing_llm):
+        generation_stream = turing_llm.generate_stream(tokens, max_length=max_length, tokenize=False)
+        i = 0
+        for response_decoded, response_tokens, _, final  in generation_stream:
+            response_tokens_decoded = get_top_sequences_list(response_decoded, response_tokens[2:], tokenizer)
+            print(f"Running Turing-LLM...  | Tokens: {len(response_tokens)}", end="\r")
+            if final is True:
+                print(f"Completed Running Turing-LLM  |  Tokens: {max_length}  |  Duration: {time.time()-start_time:2f}s")
+            yield json.dumps({ 'message': 'Success', 'first': i == 0, 'final': final, "inference_id": inference_id, "response_tokens": response_tokens, "response_tokens_decoded": response_tokens_decoded })
+            i += 1
     
-    return jsonify({ 'message': 'Success', "response_tokens": response_tokens, "response_tokens_decoded": response_tokens_decoded })
+    return Response(generate(current_app.config["turing_llm"]), mimetype='application/json')
 
 
 

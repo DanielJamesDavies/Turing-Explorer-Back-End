@@ -18,7 +18,7 @@ import { APIContext } from "../../../context/APIContext";
 // Assets
 
 export const InferenceResultsLogic = () => {
-	const { inferenceResults, viewingInferenceResultIndex, setViewingInferenceResultIndex, isViewingInferenceResult, setIsViewingInferenceResult } =
+	const { inferenceResults, viewingInferenceResultId, setViewingInferenceResultId, isViewingInferenceResult, setIsViewingInferenceResult } =
 		useContext(InferenceContext);
 	const { setLatentLayer, setLatentIndex } = useContext(LatentContext);
 	const [sequenceOfThoughtsTokenIndex, setSequenceOfThoughtsTokenIndex] = useState(false);
@@ -26,8 +26,8 @@ export const InferenceResultsLogic = () => {
 	const { APIRequest } = useContext(APIContext);
 	const navigate = useNavigate();
 
-	const onClickResultsItem = (inferenceResultIndex) => {
-		setViewingInferenceResultIndex(inferenceResultIndex);
+	const onClickResultsItem = (inferenceResultId) => {
+		setViewingInferenceResultId(inferenceResultId);
 		setIsViewingInferenceResult(true);
 	};
 
@@ -49,7 +49,7 @@ export const InferenceResultsLogic = () => {
 		setSequenceOfThoughtsTopLatents(false);
 
 		const res = await APIRequest("/get-sequence-of-thoughts", "POST", {
-			tokenIds: inferenceResults[viewingInferenceResultIndex]?.tokenIds,
+			tokenIds: inferenceResults?.find((e) => e?.inference_id === viewingInferenceResultId)?.tokenIds,
 			tokenIndex: tokenIndex,
 		});
 		if (!res?.success) {
@@ -113,7 +113,7 @@ export const InferenceResultsLogic = () => {
 
 	return {
 		inferenceResults,
-		viewingInferenceResultIndex,
+		viewingInferenceResultId,
 		isViewingInferenceResult,
 		sequenceOfThoughtsTokenIndex,
 		sequenceOfThoughtsTopLatents,

@@ -28,7 +28,9 @@ class TuringLLMForInference:
         self.tokenizer = Tokenizer()
         self.eos_token_id = self.tokenizer.get_eos_token()
         self.bos_token_id = self.tokenizer.get_bos_token()
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu' if device is None else device
+        self.device = device
+        if device is None:
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.collect_latents = collect_latents
         self.max_length = max_length
 
@@ -62,7 +64,7 @@ class TuringLLMForInference:
         self.model.load_state_dict(checkpoint['model'])
         self.model.max_length = self.max_length
         self.model.to(self.device)
-        self.model = torch.compile(self.model)
+        # self.model = torch.compile(self.model)
         self.model.eval()
         
         
@@ -142,7 +144,7 @@ class TuringLLMForInference:
 
         tokens = xgen[0, :max_length].tolist()
         text = self.tokenizer.decode(tokens[2:])
-        return text, tokens, latents, True
+        yield text, tokens, latents, True
     
     
     
