@@ -1,6 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import torch
-from TuringLLM.inference import TuringLLMForInference
 from TuringLLM.tokenizer import Tokenizer
 
 
@@ -17,12 +16,13 @@ def inference():
     
     tokenizer = Tokenizer()
     tokens = tokenizer.encode(prompt)
-    max_length = len(tokens)+2+100
+    if len(tokens) > 1000:
+        tokens = tokens[:1000]
+    max_length = len(tokens)+2+512
     
     torch.cuda.empty_cache()
     
-    turing_llm = TuringLLMForInference(max_length=max_length)
-    response_decoded, response_tokens = turing_llm.generate(tokens, max_length=max_length, tokenize=False)
+    response_decoded, response_tokens, _ = current_app.config["turing_llm"].generate(tokens, max_length=max_length, tokenize=False)
     response_tokens_decoded = get_top_sequences_list(response_decoded, response_tokens[2:], tokenizer)
     
     torch.cuda.empty_cache()

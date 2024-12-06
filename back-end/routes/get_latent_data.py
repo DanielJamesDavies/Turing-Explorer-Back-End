@@ -56,12 +56,12 @@ def get_latent_frequency(layer, latent, latent_data_path, latent_data_dir_list):
         else:
             print("Creating latents_sae_frequencies folder...")
             os.makedirs(f"{latent_data_path}/latents_sae_frequencies", exist_ok=True)
-            latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True).cpu()
+            latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True, map_location=torch.device('cpu')).cpu()
             for i in range(latents_sae_frequencies.shape[0]):
                 torch.save(latents_sae_frequencies[i].detach().clone(), f"{latent_data_path}/latents_sae_frequencies/latents_sae_frequencies_l{i}.pth")
             del latents_sae_frequencies
         
-    latents_layer_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies/latents_sae_frequencies_l{layer}.pth", weights_only=True).cpu()
+    latents_layer_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies/latents_sae_frequencies_l{layer}.pth", weights_only=True, map_location=torch.device('cpu')).cpu()
     latent_frequency = latents_layer_sae_frequencies[latent].item()
     del latents_layer_sae_frequencies
     return latent_frequency
@@ -180,7 +180,7 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
     num_layers = 12
     sae_dim = 40960
     top_frequency_threshold = 2000000
-    latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True).cpu()
+    latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True, map_location=torch.device('cpu')).cpu()
     
     all_decoded_sequences = {}
     def get_decoded_sequences(i):

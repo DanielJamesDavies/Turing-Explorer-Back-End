@@ -83,7 +83,6 @@ class TuringLLM(nn.Module):
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.transformer.wte.weight = self.lm_head.weight
         self.apply(self._init_weights)
-        self.collect_latents = False
         self.max_length = 72
         
     def _init_weights(self, module):
@@ -97,10 +96,13 @@ class TuringLLM(nn.Module):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0, std=0.02)
         
-    def forward(self, idx, targets=None, input_pos=None):
+    def forward(self, idx, targets=None, input_pos=None, max_length=None):
         # B (Batch), T (Tokens)
         B, T = idx.size()
         assert T <= self.config.block_size, f"Cannot forward sequence length {T}"
+        
+        if max_length is None:
+            max_length = self.max_length
         
         pos = torch.arange(0, T, dtype=torch.long, device=idx.device)
         pos_emb = self.transformer.wpe(pos)
@@ -108,27 +110,17 @@ class TuringLLM(nn.Module):
         x = tok_emb + pos_emb
         
         latents_mlp_down = []
-        latents_residuals = []
         for block_index, block in enumerate(self.transformer.h):
             x, mlp_x = block(x, input_pos)
-            if self.collect_latents is True and T >= self.max_length - 1:
+            if T >= self.max_length - 1:
                 latents_mlp_down.append(mlp_x)
-                latents_residuals.append(x) # [:, -1, :]
         x = self.transformer.norm_f(x)
         logits = self.lm_head(x)
         
-        loss = None
-        if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
-            
-        if self.collect_latents is True and T >= self.max_length - 1:
+        if T >= max_length - 1:
             latents_mlp_down = [latents.detach().cpu() for latents in latents_mlp_down]
-            latents_residuals = [latents.detach().cpu() for latents in latents_residuals]
-            return logits, latents_mlp_down, latents_residuals
-        elif self.collect_latents is True:
-            return logits, [], []
-        
-        return logits, loss
+            return logits, latents_mlp_down
+        return logits, []
 
     def configure_optimizers(self, weight_decay, learning_rate, betas, device):
         param_dict = {pn: p for pn, p in self.named_parameters()}

@@ -71,7 +71,7 @@ class SAE(nn.Module):
             self.decoder = nn.Linear(self.d_sae, self.d_model, bias=False)
             self.num_tokens_since_fired = torch.zeros(self.d_sae, dtype=torch.long, device=self.device)
         
-        self.load_state_dict(torch.load(path))
+        self.load_state_dict(torch.load(path, map_location=self.device))
         
         if self.only_encoder is True:
             del self.decoder

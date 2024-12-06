@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from dataclasses import dataclass
 import os
 import h5py
@@ -6,7 +6,6 @@ import torch
 import numpy as np
 import pickle
 from collections import Counter
-from TuringLLM.inference import TuringLLMForInference
 from SAE.SAE_TopK import SAE
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -55,12 +54,9 @@ def get_sequence_of_thoughts():
         return jsonify({ 'message': 'Failure' })
     
     print("Getting Sequences of Thoughts  |  Turing Inference...", end="\r")
-    turing_llm = TuringLLMForInference(max_length=max_length, collect_latents=True)
-    results, latents = turing_llm.generate_batch([tokens], max_length=max_length, tokenize=False)
-    turing_llm.clear()
+    _, _, latents = current_app.config["turing_llm"].generate(tokens[2:], max_length=max_length, tokenize=False, collect_latents=True)
     
-    
-    latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True).cpu()
+    latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True, map_location=torch.device('cpu')).cpu()
     top_frequency_threshold = 2000000
     latents_sae_frequencies_mask = (latents_sae_frequencies < top_frequency_threshold).int()
     del latents_sae_frequencies
@@ -68,19 +64,9 @@ def get_sequence_of_thoughts():
     top_latents = [[] for _ in range(12)]
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    sae_models = {}
     sae_inputs = {}
-    sae_load_start_time = time.time()
     def load_model(i, sae_path):
-        sae_model = SAE(TuringLLMConfig.n_embd, sae_dim, 128, only_encoder=True).to(device)
-        sae_model.load(f"{sae_path}/sae_layer_{i}.pth")
-        if i == 0:
-            sae_model.k = 128 + (4 * 16)
-        else:
-            sae_model.k = 128 + ((i) * 16)
-        sae_models[str(i)] = torch.compile(sae_model)
         sae_inputs[str(i)] = latents[0][i][0][-1].to(device)
-        return sae_model
     with ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(load_model, i, sae_path)
@@ -88,8 +74,6 @@ def get_sequence_of_thoughts():
         ]
         for future in futures:
             future.result()
-    
-    print(f"Load SAE Duration: {time.time()-sae_load_start_time:.2f}s                                                     ")
     
     if device == "cuda":
         batch_size = min(12, len(latents[0]))
@@ -100,7 +84,7 @@ def get_sequence_of_thoughts():
             streams = [torch.cuda.Stream(device=device) for _ in range(batch_size)]
             for j in range(batch_size):
                 with torch.cuda.stream(streams[j]):
-                    layer_sae_latents, _, _ = sae_models[str(i+j)].encode(sae_inputs[str(i+j)])
+                    layer_sae_latents, _, _ = current_app.config["sae_models"][str(i+j)].encode(sae_inputs[str(i+j)])
                     layer_sae_latents = layer_sae_latents * latents_sae_frequencies_mask[i+j].to(device)
                     top_values, top_indices = torch.topk(layer_sae_latents, 7)
                     all_top_indices[str(i+j)] = top_indices
