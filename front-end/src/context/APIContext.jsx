@@ -27,22 +27,14 @@ const APIProvider = ({ children }) => {
 							const { value, done } = await reader.read();
 							chunk += decoder.decode(value, { stream: true });
 							try {
-								console.log(JSON.parse(chunk));
 								stream_function(JSON.parse(chunk));
 							} catch (e) {
 								try {
-									console.log(
-										JSON.parse(
-											chunk
-												.split("<|END_OF_RESPONSE_CHUNK_12|>")
-												?.filter((e) => e?.length !== 0)
-												?.at(-1)
-										)
-									);
 									stream_function(
 										JSON.parse(
 											chunk
 												.split("<|END_OF_RESPONSE_CHUNK_12|>")
+												?.slice(0, -1)
 												?.filter((e) => e?.length !== 0)
 												?.at(-1)
 										)
@@ -50,10 +42,10 @@ const APIProvider = ({ children }) => {
 								} catch (e) {}
 							}
 
-							if (chunk.includes("<|END_OF_RESPONSE_CHUNK_12|>")) {
+							if (done) {
 								chunk = "";
+								break;
 							}
-							if (done) break;
 						}
 					})
 					.catch((err) => {
