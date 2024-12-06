@@ -39,7 +39,9 @@ export const NavigationBar = () => {
 				className={
 					"navigation-bar-title" + (window?.location?.pathname.replace("/", "").trim() !== "" ? " navigation-bar-title-animation" : "")
 				}
+				onMouseDown={(e) => e?.preventDefault()}
 				onClick={goToHomePage}
+				onAuxClick={goToHomePage}
 			>
 				Turing-LLM Explorer
 			</div>
@@ -56,7 +58,12 @@ export const NavigationBar = () => {
 			)}
 
 			<div className='navigation-bar-inference-btn-container'>
-				<button className='navigation-bar-inference-btn' onClick={goToInferencePage}>
+				<button
+					className='navigation-bar-inference-btn'
+					onMouseDown={(e) => e?.preventDefault()}
+					onClick={goToInferencePage}
+					onAuxClick={goToInferencePage}
+				>
 					<i className='fa-solid fa-message' />
 					<span>Inference</span>
 				</button>
@@ -95,7 +102,12 @@ export const NavigationBar = () => {
 			</div>
 			{window?.location?.pathname === "/latent" ? null : (
 				<div className='navigation-bar-latent-navigation-go-to-latent-btn-container'>
-					<button className='navigation-bar-latent-navigation-go-to-latent-btn' onClick={goToLatentPage}>
+					<button
+						className='navigation-bar-latent-navigation-go-to-latent-btn'
+						onMouseDown={(e) => e?.preventDefault()}
+						onClick={goToLatentPage}
+						onAuxClick={goToLatentPage}
+					>
 						View Latent
 					</button>
 				</div>

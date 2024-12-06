@@ -22,19 +22,16 @@ export const NavigationBarLogic = () => {
 	const { layerCount, latentCount, latentLayer, setLatentLayer, latentIndex, setLatentIndex } = useContext(LatentContext);
 	const navigate = useNavigate();
 
-	const goToHomePage = () => {
+	const goToHomePage = (e) => {
 		if (isGettingSearchResults) return false;
+		if (e?.button === 1) return window.open(window.location.origin + "/", "_blank");
 		setSearchBarValue("");
 		setSearchResults(false);
 		navigate("/");
 	};
 
-	const goToLatentPage = () => {
-		setSearchBarValue("");
-		navigate("/latent");
-	};
-
-	const goToInferencePage = () => {
+	const goToInferencePage = (e) => {
+		if (e?.button === 1) return window.open(window.location.origin + "/inference", "_blank");
 		setSearchBarValue("");
 		navigate("/inference");
 	};
@@ -95,6 +92,18 @@ export const NavigationBarLogic = () => {
 				setLatentIndex(Math.min(latentCount - 1, Math.max(0, parseInt(e.target.value) - 1)));
 			}
 		}, 1000);
+	};
+
+	const goToLatentPage = (e) => {
+		if (e?.button === 1) {
+			let newLatentLayer = latentLayer;
+			let newLatentIndex = latentIndex;
+			if (!isNaN(parseInt(latentLayerInputValue))) newLatentLayer = parseInt(latentLayerInputValue) - 1;
+			if (!isNaN(parseInt(latentIndexInputValue))) newLatentIndex = parseInt(latentIndexInputValue) - 1;
+			return window.open(window.location.origin + "/latent?layer=" + (newLatentLayer + 1) + "&latent=" + (newLatentIndex + 1), "_blank");
+		}
+		setSearchBarValue("");
+		navigate("/latent");
 	};
 
 	return {

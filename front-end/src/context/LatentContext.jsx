@@ -44,9 +44,9 @@ const LatentProvider = ({ children }) => {
 			APIRequest("/latent?layer=" + latentLayer + "&latent=" + latentIndex, "GET", undefined, (res) => {
 				if (JSON.stringify(latentPositionLastChangedTime.current) !== JSON.stringify(thisLatentPositionLastChangedTime)) return false;
 
-				if (res?.latentFrequency !== undefined) setLatentFrequency(res?.latentFrequency);
+				if (res?.latentFrequency) setLatentFrequency(res?.latentFrequency);
 
-				if (res?.topSequencesList !== undefined) setTopSequencesList(res?.topSequencesList);
+				if (res?.topSequencesList) setTopSequencesList(res?.topSequencesList);
 
 				if (res?.postFromSequenceLatentData?.outputTokenFrequencies)
 					setTopOutputTokenFrequencies(res?.postFromSequenceLatentData?.outputTokenFrequencies);
