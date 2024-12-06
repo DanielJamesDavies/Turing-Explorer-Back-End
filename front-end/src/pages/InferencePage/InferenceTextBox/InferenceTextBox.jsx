@@ -39,7 +39,7 @@ export const InferenceTextBox = () => {
 				className='inference-text-box'
 				value={inferenceTextBoxValue}
 				setValue={setInferenceTextBoxValue}
-				placeholder='Please type something for Turing-LLM to complete here'
+				placeholder='Type a prompt for Turing-LLM to complete'
 				onEnter={submitInferenceRequest}
 				focusOnStart={!isGettingInferenceResults}
 				blurOnEnter={true}

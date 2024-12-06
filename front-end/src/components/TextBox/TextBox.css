@@ -1,16 +1,17 @@
 .text-area-container {
 	position: relative;
 	width: 100%;
+	--font-size: 14px;
 }
 
 .text-area,
 .text-area-height-box {
 	margin: 0;
 	padding: 10px 12px;
-	border: 2px solid var(--colour-grey-0);
+	border: 2px solid var(--colour-grey-10);
 	width: 100%;
 	box-sizing: border-box;
-	font-size: 14px;
+	font-size: var(--font-size);
 }
 
 .text-area {
@@ -18,7 +19,7 @@
 	min-height: 44px;
 	overflow: hidden;
 	resize: none;
-	background: var(--colour-grey-0);
+	background: var(--colour-grey-10);
 	color: var(--colour-grey-75);
 	transition: border-color 0.2s, background 0.2s;
 }
@@ -34,6 +35,7 @@
 }
 
 .text-area::placeholder {
+	font-size: 14px;
 	transform-origin: center left;
 	transition: 0.2s;
 }

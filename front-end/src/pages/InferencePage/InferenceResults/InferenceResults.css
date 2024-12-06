@@ -79,6 +79,7 @@
 	flex-shrink: 0;
 	width: 100%;
 	transition: 0.2s;
+	max-width: 100%;
 }
 
 .inference-results-container:not(.inference-results-container-viewing-result) .inference-result-container {
@@ -119,6 +120,8 @@
 .inference-result-tokens {
 	margin: 32px 0;
 	padding: 0 4px;
+	width: calc(100% - 2 * 4px);
+	max-width: 100%;
 }
 
 .inference-result-tokens span {
@@ -127,7 +130,7 @@
 	line-height: 22px;
 	margin: -2px 0;
 	padding: 2px 0;
-	white-space: pre;
+	white-space: pre-wrap;
 	cursor: pointer;
 }
 
