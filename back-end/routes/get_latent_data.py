@@ -166,7 +166,7 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
         return {}
 
     # Get output_token_frequencies
-    print("Get Latent Data: Getting output_token_frequencies...                                             ", end="\r")
+    print("Get Latent Data: Getting Output Token Frequencies...                                             ", end="\r")
     with h5py.File(f'{unembed_folder_path}/latents_topk_output_token_frequencies.h5', 'r') as h5f:
         output_token_frequencies = pd.DataFrame(h5f[f"{layer}-{latent}"][:], columns=["token", "frequency"])
         output_token_frequencies['decoded_token'] = output_token_frequencies['token'].apply(decode_tokens)
@@ -192,7 +192,7 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
     top_frequency_threshold = 2000000
     latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True, map_location=torch.device('cpu')).cpu()
     
-    print("Get Latent Data: Getting all_decoded_sequences...                                             ", end="\r")
+    print("Get Latent Data: Getting Decoded Sequences...                                             ", end="\r")
     all_decoded_sequences = {}
     def get_decoded_sequences(i):
         with open(f"{latent_data_path}/decoded_sequences/layer_{i}.pkl", "rb") as f:
@@ -202,7 +202,7 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
         for future in futures:
             future.result()
     
-    print("Get Latent Data: Getting top other latents...                                             ", end="\r")
+    print("Get Latent Data: Getting Top Other Latents...                                             ", end="\r")
     for top_other_latents_h5_filename in top_other_latents_h5_filenames:
         top_other_latents[top_other_latents_h5_filename] = [False for _ in range(num_layers)]
         top_other_latents[top_other_latents_h5_filename + "_rare"] = [[False for _ in range(80)] for _ in range(num_layers)]
