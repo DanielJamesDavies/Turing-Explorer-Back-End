@@ -62,7 +62,7 @@ def get_sequence_of_thoughts():
     del latents_sae_frequencies
     
     top_latents = [[] for _ in range(12)]
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = current_app.config["device"]
     
     sae_inputs = {}
     def load_model(i, sae_path):
@@ -75,11 +75,12 @@ def get_sequence_of_thoughts():
         for future in futures:
             future.result()
     
+    all_top_indices = {}
+    all_top_values = {}
+    
+    sae_inference_start_time = time.time()
     if device == "cuda":
         batch_size = min(12, len(latents[0]))
-
-        all_top_indices = {}
-        all_top_values = {}
         for i in range(0, len(latents[0]), batch_size):
             streams = [torch.cuda.Stream(device=device) for _ in range(batch_size)]
             for j in range(batch_size):
@@ -90,42 +91,56 @@ def get_sequence_of_thoughts():
                     all_top_indices[str(i+j)] = top_indices
                     all_top_values[str(i+j)] = top_values
             torch.cuda.synchronize()
-              
-        sae_decoded_start_time = time.time()
-        def get_top_latents(i, latent_data_path, all_top_indices, all_top_values):
-            with open(f"{latent_data_path}/decoded_sequences/layer_{i}.pkl", "rb") as f:
-                decoded_sequences = pickle.load(f)
-            for index, value in zip(all_top_indices[str(i)], all_top_values[str(i)]):
-                top_latents[i].append({ "latent": int(index), "value": float(value), "topSequences": decoded_sequences[(index*10):(index*10)+2] })
-        with ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(get_top_latents, i, latent_data_path, all_top_indices, all_top_values)
-                for i in range(len(latents[0]))
-            ]
-            for future in futures:
-                future.result()
-        print(f"SAE Decoded Duration: {time.time()-sae_decoded_start_time:.2f}s                                                     ")
-        
     else:
-        sae_model = SAE(TuringLLMConfig.n_embd, sae_dim, 128, only_encoder=True).to(device)
-        sae_model = torch.compile(sae_model)
-        for layer_index, layer_latents in enumerate(latents[0]):
+        def get_sae_top_features(layer_index, layer_latents, sae_model, all_top_indices, all_top_values):
             print(f"Getting Sequences of Thoughts  |  Layer {layer_index+1}  |  Processing...", end="\r")
-            sae_model.load(f"{sae_path}/sae_layer_{layer_index}.pth")
-            if layer_index == 0:
-                sae_model.k = 128 + (4 * 16)
-            else:
-                sae_model.k = 128 + (layer_index * 16)
             layer_latents = layer_latents[0][-1].to(device)
             layer_sae_latents, _, _ = sae_model.encode(layer_latents)
             layer_sae_latents = layer_sae_latents * latents_sae_frequencies_mask[layer_index].to(device)
             top_values, top_indices = torch.topk(layer_sae_latents, 7)
-            with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}.pkl", "rb") as f:
-                decoded_sequences = pickle.load(f)
-            for index, value in zip(top_indices, top_values):
-                top_latents[layer_index].append({ "latent": int(index), "value": float(value), "topSequences": decoded_sequences[(index*10):(index*10)+2] })
-        del sae_model
+            all_top_indices[str(layer_index)] = top_indices
+            all_top_values[str(layer_index)] = top_values
+        
+        batch_size = min(12, len(latents[0]))
+        for i in range(0, len(latents[0]), batch_size):
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(get_sae_top_features, i+j, latents[0][i+j], current_app.config["sae_models"][str(i+j)], all_top_indices, all_top_values)
+                    for j in range(batch_size)
+                ]
+                for future in futures:
+                    future.result()
+                
+        # for layer_index, layer_latents in enumerate(latents[0]):
+        #     print(f"Getting Sequences of Thoughts  |  Layer {layer_index+1}  |  Processing...", end="\r")
+        #     layer_latents = layer_latents[0][-1].to(device)
+        #     layer_sae_latents, _, _ = current_app.config["sae_models"][str(layer_index)].encode(layer_latents)
+        #     layer_sae_latents = layer_sae_latents * latents_sae_frequencies_mask[layer_index].to(device)
+        #     top_values, top_indices = torch.topk(layer_sae_latents, 7)
+        #     all_top_indices[str(i+j)] = top_indices
+        #     all_top_values[str(i+j)] = top_values
+        #     with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}.pkl", "rb") as f:
+        #         decoded_sequences = pickle.load(f)
+        #     for index, value in zip(top_indices, top_values):
+        #         top_latents[layer_index].append({ "latent": int(index), "value": float(value), "topSequences": decoded_sequences[(index*10):(index*10)+2] })
+        # # del sae_model
     torch.cuda.empty_cache()
+    print(f"Get SAE Features Duration: {time.time()-sae_inference_start_time:.2f}s                                                     ")
+              
+    sae_decoded_start_time = time.time()
+    def get_top_latents(i, latent_data_path, all_top_indices, all_top_values):
+        with open(f"{latent_data_path}/decoded_sequences/layer_{i}.pkl", "rb") as f:
+            decoded_sequences = pickle.load(f)
+        for index, value in zip(all_top_indices[str(i)], all_top_values[str(i)]):
+            top_latents[i].append({ "latent": int(index), "value": float(value), "topSequences": decoded_sequences[(index*10):(index*10)+2] })
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(get_top_latents, i, latent_data_path, all_top_indices, all_top_values)
+            for i in range(len(latents[0]))
+        ]
+        for future in futures:
+            future.result()
+    print(f"SAE Decoded Duration: {time.time()-sae_decoded_start_time:.2f}s                                                     ")
     
     top_latents_indices = [[item["latent"] for item in top_latents_layer] for top_latents_layer in top_latents]
 

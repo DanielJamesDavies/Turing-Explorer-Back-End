@@ -23,6 +23,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = "cpu"
 app.config["device"] = device
 
 
@@ -53,7 +54,7 @@ if not os.path.exists(sae_path):
     print("Failed to Load SAEs: Folder \"./SAE/sae\" Not Found")
 else:
     def load_model(i, sae_path):
-        sae_model = SAE(TuringLLMConfig.n_embd, sae_dim, 128, only_encoder=True).to(device)
+        sae_model = SAE(TuringLLMConfig.n_embd, sae_dim, 128, only_encoder=True, device=device).to(device)
         sae_model.load(f"{sae_path}/sae_layer_{i}.pth")
         if i == 0:
             sae_model.k = 128 + (4 * 16)

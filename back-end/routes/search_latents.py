@@ -4,8 +4,6 @@ import time
 import pickle
 import logging
 import torch
-import numpy as np
-import h5py
 from transformers import AutoTokenizer
 # from sentence_transformers import SentenceTransformer, util
 
@@ -15,10 +13,6 @@ from transformers import AutoTokenizer
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR)
-
-
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 

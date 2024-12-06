@@ -1,10 +1,9 @@
 import time
 import random
-from dataclasses import dataclass
 import numpy as np
 import torch
 from torch.nn import functional as F
-import pickle
+import threading
 
 from TuringLLM.model import TuringLLM
 from TuringLLM.tokenizer import Tokenizer
@@ -33,6 +32,7 @@ class TuringLLMForInference:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.collect_latents = collect_latents
         self.max_length = max_length
+        self.lock = threading.Lock()
 
         torch.manual_seed(12)
         if self.device == 'cuda':
@@ -76,7 +76,7 @@ class TuringLLMForInference:
     
     
     
-    def generate(self, x, max_length=64, tokenize=True, topk=12, collect_latents=False):
+    def generate(self, x, max_length=64, tokenize=True, topk=5, collect_latents=False):
         self.max_length = max_length
         self.model.max_length = max_length
         self.collect_latents = collect_latents
@@ -93,17 +93,18 @@ class TuringLLMForInference:
         sample_rng = torch.Generator(device=self.device)
         sample_rng.manual_seed(12)
         latents = None
-        while xgen.size(1) < max_length:
-            with torch.no_grad():
-                logits, latents_mlp_down = self.model(xgen, max_length=max_length)
-                if collect_latents is True and xgen.size(1) >= max_length - 1:
-                    latents = [latents_mlp_down]
-                logits = logits[:, -1, :]
-                props = F.softmax(logits, dim=-1)
-                topk_probs, topk_indices = torch.topk(props, topk, dim=-1)
-                ix = torch.multinomial(topk_probs, 1, generator=sample_rng)
-                xcol = torch.gather(topk_indices, -1, ix)
-                xgen = torch.cat((xgen, xcol), dim=1)
+        with self.lock:
+            while xgen.size(1) < max_length:
+                with torch.no_grad():
+                    logits, latents_mlp_down = self.model(xgen, max_length=max_length)
+                    if collect_latents is True and xgen.size(1) >= max_length - 1:
+                        latents = [latents_mlp_down]
+                    logits = logits[:, -1, :]
+                    props = F.softmax(logits, dim=-1)
+                    topk_probs, topk_indices = torch.topk(props, topk, dim=-1)
+                    ix = torch.multinomial(topk_probs, 1, generator=sample_rng)
+                    xcol = torch.gather(topk_indices, -1, ix)
+                    xgen = torch.cat((xgen, xcol), dim=1)
 
         tokens = xgen[0, :max_length].tolist()
         text = self.tokenizer.decode(tokens[2:])
@@ -111,7 +112,7 @@ class TuringLLMForInference:
     
     
     
-    def generate_stream(self, x, max_length=64, tokenize=True, topk=12, collect_latents=False):
+    def generate_stream(self, x, max_length=64, tokenize=True, topk=5, collect_latents=False):
         self.max_length = max_length
         self.model.max_length = max_length
         self.collect_latents = collect_latents
@@ -128,19 +129,20 @@ class TuringLLMForInference:
         sample_rng = torch.Generator(device=self.device)
         sample_rng.manual_seed(12)
         latents = None
-        while xgen.size(1) < max_length:
-            with torch.no_grad():
-                logits, latents_mlp_down = self.model(xgen, max_length=max_length)
-                if collect_latents is True and xgen.size(1) >= max_length - 1:
-                    latents = [latents_mlp_down]
-                logits = logits[:, -1, :]
-                props = F.softmax(logits, dim=-1)
-                topk_probs, topk_indices = torch.topk(props, topk, dim=-1)
-                ix = torch.multinomial(topk_probs, 1, generator=sample_rng)
-                xcol = torch.gather(topk_indices, -1, ix)
-                xgen = torch.cat((xgen, xcol), dim=1)
-                tokens = xgen[0].tolist()
-                yield self.tokenizer.decode(tokens[2:]), tokens, None, False
+        with self.lock:
+            while xgen.size(1) < max_length:
+                with torch.no_grad():
+                    logits, latents_mlp_down = self.model(xgen, max_length=max_length)
+                    if collect_latents is True and xgen.size(1) >= max_length - 1:
+                        latents = [latents_mlp_down]
+                    logits = logits[:, -1, :]
+                    props = F.softmax(logits, dim=-1)
+                    topk_probs, topk_indices = torch.topk(props, topk, dim=-1)
+                    ix = torch.multinomial(topk_probs, 1, generator=sample_rng)
+                    xcol = torch.gather(topk_indices, -1, ix)
+                    xgen = torch.cat((xgen, xcol), dim=1)
+                    tokens = xgen[0].tolist()
+                    yield self.tokenizer.decode(tokens[2:]), tokens, None, False
 
         tokens = xgen[0, :max_length].tolist()
         text = self.tokenizer.decode(tokens[2:])
@@ -174,18 +176,19 @@ class TuringLLMForInference:
         completed = []
         latents = None
         
-        while xgen.size(1) < max_length:
-            with torch.no_grad():
-                logits, latents_mlp_down = self.model(xgen, max_length=max_length)
-                if collect_latents is True and xgen.size(1) >= max_length - 1:
-                    latents = [latents_mlp_down]
-                logits = logits[:, -1, :]
-                props = F.softmax(logits, dim=-1)
-                topk_probs, topk_indices = torch.topk(props, topk, dim=-1)
-                ix = torch.multinomial(topk_probs, 1, generator=sample_rng)
-                xcol = torch.gather(topk_indices, -1, ix)
-                xgen = torch.cat((xgen, xcol), dim=1)
-                completed = [xgen[i].tolist() for i in range(xcol.size(0))]
+        with self.lock:
+            while xgen.size(1) < max_length:
+                with torch.no_grad():
+                    logits, latents_mlp_down = self.model(xgen, max_length=max_length)
+                    if collect_latents is True and xgen.size(1) >= max_length - 1:
+                        latents = [latents_mlp_down]
+                    logits = logits[:, -1, :]
+                    props = F.softmax(logits, dim=-1)
+                    topk_probs, topk_indices = torch.topk(props, topk, dim=-1)
+                    ix = torch.multinomial(topk_probs, 1, generator=sample_rng)
+                    xcol = torch.gather(topk_indices, -1, ix)
+                    xgen = torch.cat((xgen, xcol), dim=1)
+                    completed = [xgen[i].tolist() for i in range(xcol.size(0))]
 
         end_time = time.time()
         tokens_generated_count = 0
