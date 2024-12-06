@@ -224,9 +224,10 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
                 for latents_list in top_other_latents[top_other_latents_h5_filename][layer_index]
             ]
             
+            layer_latents_sae_frequencies = latents_sae_frequencies[layer_index]
             for i in range(len(top_other_latents[top_other_latents_h5_filename][layer_index])):
-                def filterFunction(latent):
-                    if latents_sae_frequencies[layer_index][int(latent["latent"])] >= top_frequency_threshold:
+                def filterFunction(latent, frequencies=layer_latents_sae_frequencies):
+                    if frequencies[int(latent["latent"])] >= top_frequency_threshold:
                         return False
                     return True
                 top_other_latents[top_other_latents_h5_filename + "_rare"][layer_index][i] = list(filter(filterFunction, top_other_latents[top_other_latents_h5_filename][layer_index][i]))
