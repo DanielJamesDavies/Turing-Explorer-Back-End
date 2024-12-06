@@ -110,20 +110,6 @@ def get_sequence_of_thoughts():
                 ]
                 for future in futures:
                     future.result()
-                
-        # for layer_index, layer_latents in enumerate(latents[0]):
-        #     print(f"Getting Sequences of Thoughts  |  Layer {layer_index+1}  |  Processing...", end="\r")
-        #     layer_latents = layer_latents[0][-1].to(device)
-        #     layer_sae_latents, _, _ = current_app.config["sae_models"][str(layer_index)].encode(layer_latents)
-        #     layer_sae_latents = layer_sae_latents * latents_sae_frequencies_mask[layer_index].to(device)
-        #     top_values, top_indices = torch.topk(layer_sae_latents, 7)
-        #     all_top_indices[str(i+j)] = top_indices
-        #     all_top_values[str(i+j)] = top_values
-        #     with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}.pkl", "rb") as f:
-        #         decoded_sequences = pickle.load(f)
-        #     for index, value in zip(top_indices, top_values):
-        #         top_latents[layer_index].append({ "latent": int(index), "value": float(value), "topSequences": decoded_sequences[(index*10):(index*10)+2] })
-        # # del sae_model
     torch.cuda.empty_cache()
     print(f"Get SAE Features Duration: {time.time()-sae_inference_start_time:.2f}s                                                     ")
               
