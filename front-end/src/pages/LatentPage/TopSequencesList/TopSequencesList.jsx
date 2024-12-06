@@ -145,7 +145,7 @@ export const TopSequencesList = () => {
 									</span>
 								</div>
 								<div>
-									{!topOtherLatents ? (
+									{!topOtherLatents || topOtherLatents.length === 0 ? (
 										<div className='latent-top-sequences-list-loading-circle-container'>
 											<LoadingCircle center={true} size='s' />
 										</div>
@@ -176,20 +176,9 @@ export const TopSequencesList = () => {
 																onMouseDown={(e) => e?.preventDefault()}
 																onClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)}
 																onAuxClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)}
-																// onMouseEnter={() => onLatentMouseEnter(topOtherLatentsLayerIndex, latentIndex)}
-																// onMouseLeave={() => onLatentMouseLeave(topOtherLatentsLayerIndex, latentIndex)}
 															>
 																<div className='inference-result-latents-latent'>
-																	<button
-																		onClick={(e) =>
-																			goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)
-																		}
-																		onAuxClick={(e) =>
-																			goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)
-																		}
-																		// onClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, topLatent?.latent)}
-																		// onAuxClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, topLatent?.latent)}
-																	>
+																	<button>
 																		<span>{otherLatent?.latent + 1}</span>
 																	</button>
 																	<div className='inference-result-latents-latent-preview'>
