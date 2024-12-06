@@ -41,22 +41,21 @@ const LatentProvider = ({ children }) => {
 
 			if (location?.pathname !== "/latent") return false;
 
-			const res = await APIRequest("/latent?layer=" + latentLayer + "&latent=" + latentIndex);
+			APIRequest("/latent?layer=" + latentLayer + "&latent=" + latentIndex, "GET", undefined, (res) => {
+				if (JSON.stringify(latentPositionLastChangedTime.current) !== JSON.stringify(thisLatentPositionLastChangedTime)) return false;
 
-			if (JSON.stringify(latentPositionLastChangedTime.current) !== JSON.stringify(thisLatentPositionLastChangedTime)) return false;
+				if (res?.latentFrequency !== undefined) setLatentFrequency(res?.latentFrequency);
 
-			if (res?.latentFrequency !== undefined) setLatentFrequency(res?.latentFrequency);
+				if (res?.topSequencesList !== undefined) setTopSequencesList(res?.topSequencesList);
 
-			if (res?.topSequencesList !== undefined) setTopSequencesList(res?.topSequencesList);
+				if (res?.postFromSequenceLatentData?.outputTokenFrequencies)
+					setTopOutputTokenFrequencies(res?.postFromSequenceLatentData?.outputTokenFrequencies);
 
-			if (res?.postFromSequenceLatentData?.outputTokenFrequencies !== undefined)
-				setTopOutputTokenFrequencies(res?.postFromSequenceLatentData?.outputTokenFrequencies);
+				if (res?.postFromSequenceLatentData?.layerUnembedTokenFrequencies)
+					setTopLayerUnembedTokenFrequencies(res?.postFromSequenceLatentData?.layerUnembedTokenFrequencies);
 
-			if (res?.postFromSequenceLatentData?.layerUnembedTokenFrequencies !== undefined)
-				setTopLayerUnembedTokenFrequencies(res?.postFromSequenceLatentData?.layerUnembedTokenFrequencies);
-
-			if (res?.postFromSequenceLatentData?.topOtherLatents !== undefined)
-				setTopOtherLatents(res?.postFromSequenceLatentData?.topOtherLatents);
+				if (res?.postFromSequenceLatentData?.topOtherLatents) setTopOtherLatents(res?.postFromSequenceLatentData?.topOtherLatents);
+			});
 		};
 
 		const timeout = setTimeout(() => getLatentData(), 200);

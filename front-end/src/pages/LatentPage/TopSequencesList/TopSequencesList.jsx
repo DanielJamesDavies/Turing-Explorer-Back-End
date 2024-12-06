@@ -145,70 +145,80 @@ export const TopSequencesList = () => {
 									</span>
 								</div>
 								<div>
-									{topOtherLatents[
-										sequenceOtherLatentsTypes[sequenceOtherLatentsTypeIndex]?.key + (isHidingCommonOtherLatents ? "_rare" : "")
-									]?.map((topOtherLatentsLayer, topOtherLatentsLayerIndex) => (
-										<div
-											className={
-												"latent-top-sequences-item-other-latents-layer" +
-												(topOtherLatentsLayerIndex > 5
-													? " latent-top-sequences-item-other-latents-layer-use-higher-preview"
-													: "")
-											}
-											style={{ "--layer-index": topOtherLatentsLayerIndex }}
-										>
-											<div className='latent-top-sequences-item-other-latents-layer-title'>
-												Layer {topOtherLatentsLayerIndex + 1 < 10 ? "0" : ""}
-												{topOtherLatentsLayerIndex + 1}
-											</div>
-											<div className='latent-top-sequences-item-other-latents-layer-sequences'>
-												{topOtherLatentsLayer[index]?.slice(0, 24)?.map((otherLatent, index2) => (
-													<div key={index2} className='latent-top-sequences-item-other-latent-container'>
-														<div
-															className='inference-result-latents-latent-container'
-															onMouseDown={(e) => e?.preventDefault()}
-															onClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)}
-															onAuxClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)}
-															// onMouseEnter={() => onLatentMouseEnter(topOtherLatentsLayerIndex, latentIndex)}
-															// onMouseLeave={() => onLatentMouseLeave(topOtherLatentsLayerIndex, latentIndex)}
-														>
-															<div className='inference-result-latents-latent'>
-																<button
-																	onClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)}
-																	onAuxClick={(e) =>
-																		goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)
-																	}
-																	// onClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, topLatent?.latent)}
-																	// onAuxClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, topLatent?.latent)}
-																>
-																	<span>{otherLatent?.latent + 1}</span>
-																</button>
-																<div className='inference-result-latents-latent-preview'>
-																	<div className='inference-result-latents-latent-preview-location'>
-																		<span>Layer {topOtherLatentsLayerIndex + 1}</span>
-																		<span>Latent {otherLatent?.latent + 1}</span>
-																	</div>
-																	<div className='inference-result-latents-latent-preview-label'>
-																		Top Sequences
-																	</div>
-																	<div className='inference-result-latents-latent-preview-top-sequences'>
-																		{otherLatent?.topSequences?.map((topSequence, topSequenceIndex) => (
-																			<div
-																				key={topSequenceIndex}
-																				className='inference-result-latents-latent-preview-top-sequence'
-																			>
-																				{topSequence}
-																			</div>
-																		))}
+									{!topOtherLatents ? (
+										<div className='latent-top-sequences-list-loading-circle-container'>
+											<LoadingCircle center={true} size='s' />
+										</div>
+									) : (
+										topOtherLatents[
+											sequenceOtherLatentsTypes[sequenceOtherLatentsTypeIndex]?.key +
+												(isHidingCommonOtherLatents ? "_rare" : "")
+										]?.map((topOtherLatentsLayer, topOtherLatentsLayerIndex) => (
+											<div
+												key={topOtherLatentsLayerIndex}
+												className={
+													"latent-top-sequences-item-other-latents-layer" +
+													(topOtherLatentsLayerIndex > 5
+														? " latent-top-sequences-item-other-latents-layer-use-higher-preview"
+														: "")
+												}
+												style={{ "--layer-index": topOtherLatentsLayerIndex }}
+											>
+												<div className='latent-top-sequences-item-other-latents-layer-title'>
+													Layer {topOtherLatentsLayerIndex + 1 < 10 ? "0" : ""}
+													{topOtherLatentsLayerIndex + 1}
+												</div>
+												<div className='latent-top-sequences-item-other-latents-layer-sequences'>
+													{topOtherLatentsLayer[index]?.slice(0, 24)?.map((otherLatent, index2) => (
+														<div key={index2} className='latent-top-sequences-item-other-latent-container'>
+															<div
+																className='inference-result-latents-latent-container'
+																onMouseDown={(e) => e?.preventDefault()}
+																onClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)}
+																onAuxClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)}
+																// onMouseEnter={() => onLatentMouseEnter(topOtherLatentsLayerIndex, latentIndex)}
+																// onMouseLeave={() => onLatentMouseLeave(topOtherLatentsLayerIndex, latentIndex)}
+															>
+																<div className='inference-result-latents-latent'>
+																	<button
+																		onClick={(e) =>
+																			goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)
+																		}
+																		onAuxClick={(e) =>
+																			goToLatent(e, topOtherLatentsLayerIndex, otherLatent?.latent)
+																		}
+																		// onClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, topLatent?.latent)}
+																		// onAuxClick={(e) => goToLatent(e, topOtherLatentsLayerIndex, topLatent?.latent)}
+																	>
+																		<span>{otherLatent?.latent + 1}</span>
+																	</button>
+																	<div className='inference-result-latents-latent-preview'>
+																		<div className='inference-result-latents-latent-preview-location'>
+																			<span>Layer {topOtherLatentsLayerIndex + 1}</span>
+																			<span>Latent {otherLatent?.latent + 1}</span>
+																		</div>
+																		<div className='inference-result-latents-latent-preview-label'>
+																			Top Sequences
+																		</div>
+																		<div className='inference-result-latents-latent-preview-top-sequences'>
+																			{otherLatent?.topSequences?.map((topSequence, topSequenceIndex) => (
+																				<div
+																					key={topSequenceIndex}
+																					className='inference-result-latents-latent-preview-top-sequence'
+																				>
+																					{topSequence}
+																				</div>
+																			))}
+																		</div>
 																	</div>
 																</div>
 															</div>
 														</div>
-													</div>
-												))}
+													))}
+												</div>
 											</div>
-										</div>
-									))}
+										))
+									)}
 								</div>
 							</div>
 						</div>

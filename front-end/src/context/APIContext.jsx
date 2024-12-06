@@ -22,13 +22,29 @@ const APIProvider = ({ children }) => {
 						if (!res.ok) throw new Error(`Network response was not ok: ${res.statusText}`);
 						const reader = res.body.getReader();
 						const decoder = new TextDecoder("utf-8");
+						let chunk = "";
 						while (true) {
 							const { value, done } = await reader.read();
-							if (done) break;
-							const chunk = decoder.decode(value, { stream: true });
+							chunk += decoder.decode(value, { stream: true });
 							try {
 								stream_function(JSON.parse(chunk));
-							} catch (e) {}
+							} catch (e) {
+								try {
+									stream_function(
+										JSON.parse(
+											chunk
+												.split("<|END_OF_RESPONSE_CHUNK_12|>")
+												?.filter((e) => e?.length !== 0)
+												?.at(-1)
+										)
+									);
+								} catch (e) {}
+							}
+
+							if (chunk.includes("<|END_OF_RESPONSE_CHUNK_12|>")) {
+								chunk = "";
+							}
+							if (done) break;
 						}
 					})
 					.catch((err) => {
