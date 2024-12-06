@@ -1,5 +1,5 @@
 import __main__
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response, jsonify
 from flask_cors import CORS
 from dataclasses import dataclass
 import time
@@ -81,6 +81,12 @@ def handle_options_requests():
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         return response, 200
+
+
+
+@app.route("/", methods=["GET"])
+def test():
+    return jsonify({"message": "Hello! 👋"}), 200
 
 
 
