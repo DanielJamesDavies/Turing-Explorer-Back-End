@@ -14,10 +14,10 @@ const InferenceProvider = ({ children }) => {
 	const location = useLocation();
 
 	const submitInferenceRequest = useCallback(async () => {
+		if (isGettingInferenceResults) return false;
 		setIsGettingInferenceResults(true);
 		const newInferenceTextBoxValue = JSON.parse(JSON.stringify(inferenceTextBoxValue));
 		const handleStreamResponse = (res) => {
-			console.log(res);
 			if (res?.first) {
 				setIsGettingInferenceResults(false);
 				setInferenceTextBoxValue("");
@@ -31,7 +31,7 @@ const InferenceProvider = ({ children }) => {
 			);
 		};
 		APIRequest("/inference", "POST", { prompt: newInferenceTextBoxValue }, handleStreamResponse);
-	}, [inferenceTextBoxValue]);
+	}, [inferenceTextBoxValue, isGettingInferenceResults]);
 
 	useEffect(() => {
 		if (location?.pathname !== "/inference") {

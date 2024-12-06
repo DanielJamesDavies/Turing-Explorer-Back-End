@@ -29,6 +29,8 @@ export const InferenceResultsLogic = () => {
 	const onClickResultsItem = (inferenceResultId) => {
 		setViewingInferenceResultId(inferenceResultId);
 		setIsViewingInferenceResult(true);
+		setSequenceOfThoughtsTokenIndex(false);
+		setSequenceOfThoughtsTopLatents(false);
 	};
 
 	const backToInferenceResults = () => {

@@ -21,7 +21,7 @@ def inference():
     tokens = tokenizer.encode(prompt)
     if len(tokens) > 1000:
         tokens = tokens[:1000]
-    max_length = len(tokens)+2+(512 if current_app.config["device"] == "cuda" else 64)
+    max_length = len(tokens)+2+(800 if current_app.config["device"] == "cuda" else 80)
     
     torch.cuda.empty_cache()
     

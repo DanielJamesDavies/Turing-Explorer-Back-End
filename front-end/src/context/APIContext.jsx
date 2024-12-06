@@ -34,13 +34,11 @@ const APIProvider = ({ children }) => {
 					.catch((err) => {
 						console.error("Fetch error:", err);
 					});
+			} else {
+				const response = await fetch(API_URL + path, data);
+				const responseData = await response.json();
+				return responseData;
 			}
-
-			const response = await fetch(API_URL + path, data);
-
-			const responseData = await response.json();
-
-			return responseData;
 		} catch (e) {
 			return { errors: [{ message: "Failed to Send Request to Server" }] };
 		}
