@@ -36,12 +36,13 @@ def get_latent_data():
     
 def get_latent_data_stream(layer, latent, latent_data_path, latent_data_dir_list):
     latent_frequency = get_latent_frequency(layer, latent, latent_data_path, latent_data_dir_list)
+    yield json.dumps({ 'message': 'Success', 'first': True, 'final': False, 'latentFrequency': latent_frequency, 'topSequencesList': None, "postFromSequenceLatentData": None }) + "<|END_OF_RESPONSE_CHUNK_12|>"
+    
     latent_sequences_tokens = get_latent_top_sequences_tokens(layer, latent, latent_data_path, latent_data_dir_list)
     latent_sequences_values = get_latent_top_sequences_values(layer, latent, latent_data_path, latent_data_dir_list)
-        
     tokenizer = get_tokenizer()
     top_sequences_list = get_top_sequences_list(latent_sequences_tokens, latent_sequences_values, tokenizer)
-    yield json.dumps({ 'message': 'Success', 'first': True, 'final': False, 'latentFrequency': latent_frequency, 'topSequencesList': top_sequences_list[:24], "postFromSequenceLatentData": None }) + "<|END_OF_RESPONSE_CHUNK_12|>"
+    yield json.dumps({ 'message': 'Success', 'first': False, 'final': False, 'latentFrequency': latent_frequency, 'topSequencesList': top_sequences_list[:24], "postFromSequenceLatentData": None }) + "<|END_OF_RESPONSE_CHUNK_12|>"
     
     post_from_sequence_latent_data_responses = get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_data_dir_list, tokenizer)
     for post_from_sequence_latent_data in post_from_sequence_latent_data_responses:
