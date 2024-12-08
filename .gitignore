@@ -10,6 +10,7 @@ latent_data/latents_sae_tokens_from_sequence.h5
 latent_data/latents_sae_values_from_sequence.h5
 latent_data/latents_sae_frequencies
 latent_data/decoded_sequences
+latent_data/decoded_sequences_old
 
 latent_data/top_other_latents/0/
 latent_data/top_other_latents/1/

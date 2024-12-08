@@ -38,7 +38,7 @@ class TuringLLMConfig:
     hidden_size: int = 4096
     norm_eps: float = 1e-5
 __main__.TuringLLMConfig = TuringLLMConfig
-print("Loading Turing LLM...", end="\r")
+print("Loading Turing-LLM...", end="\r")
 turing_load_start_time = time.time()
 app.config["turing_llm"] = TuringLLMForInference(max_length=3, device=device)
 app.config["turing_llm"].generate(app.config["turing_llm"].tokenizer.encode("Turing"), max_length=3, tokenize=False)

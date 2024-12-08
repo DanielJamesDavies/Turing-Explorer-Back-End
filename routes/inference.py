@@ -27,16 +27,16 @@ def inference():
     
     inference_id = str(uuid.uuid4())
     
-    print("Running Turing-LLM...", end="\r")
+    print("Inference  |  Running Turing-LLM...", end="\r")
     start_time = time.time()
     def generate(turing_llm):
         generation_stream = turing_llm.generate_stream(tokens, max_length=max_length, tokenize=False)
         i = 0
         for response_decoded, response_tokens, _, final  in generation_stream:
             response_tokens_decoded = get_top_sequences_list(response_decoded, response_tokens[2:], tokenizer)
-            print(f"Running Turing-LLM...  | Tokens: {len(response_tokens)}", end="\r")
+            print(f"Inference  |  Running Turing-LLM...  | Tokens: {len(response_tokens)}", end="\r")
             if final is True:
-                print(f"Completed Running Turing-LLM  |  Tokens: {max_length}  |  Duration: {time.time()-start_time:.2f}s")
+                print(f"Inference  |  Completed Running Turing-LLM  |  Tokens: {max_length}  |  Duration: {time.time()-start_time:.2f}s")
             yield json.dumps({ 'message': 'Success', 'first': i == 0, 'final': final, "inference_id": inference_id, "response_tokens": response_tokens, "response_tokens_decoded": response_tokens_decoded }) + "<|END_OF_RESPONSE_CHUNK_12|>"
             i += 1
     

@@ -2,11 +2,12 @@ from flask import Blueprint, request, jsonify
 import os
 import time
 import pickle
+import h5py
 import logging
 import torch
 from transformers import AutoTokenizer
-# from sentence_transformers import SentenceTransformer, util
-from concurrent.futures import ThreadPoolExecutor
+import pandas as pd
+import concurrent.futures
 
 
 
@@ -45,126 +46,80 @@ def search_latents():
 
 
 def get_keyword_match_results(search_prompt, latent_data_path):
+    start_time = time.time()
     results = []
     search_words = [keywords.strip().lower() for keywords in search_prompt.split(",")]
-    frequencies_on_all_keywords = True
-    
-    tokenizer = get_tokenizer()
     
     os.makedirs(f"{latent_data_path}/decoded_sequences", exist_ok=True)
     decoded_dir_list = os.listdir(f"{latent_data_path}/decoded_sequences")
 
     for layer_index in range(12):
-        if f"layer_{layer_index}.pkl" not in decoded_dir_list:
-            print("Error: File \"decoded_sequences/layer_{layer_index}.pkl\" Not Found")
-            return []
-            
-    def search_layer_latents(layer_index, results):
-        start_time = time.time()
-        
-        with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}.pkl", "rb") as f:
-            decoded_sequences = pickle.load(f)
-            
-        search_words_frequencies = torch.zeros((40960), dtype=torch.int16)
-        
-        for i in range(0, len(decoded_sequences), 10):
-            latent_top_sequences = decoded_sequences[i:i + 10]
-            for latent_top_sequence in latent_top_sequences:
-                if frequencies_on_all_keywords is False or all(search_word.lower() in latent_top_sequence.lower() for search_word in search_words):
-                    for search_word in search_words:
-                        search_words_frequencies[i//10] += latent_top_sequence.lower().count(search_word.lower())
-                
+        for i in range(8):
+            if f"layer_{layer_index}_batch_{i}.pkl" not in decoded_dir_list:
+                print("Error: File \"decoded_sequences/layer_{layer_index}_batch_{i}.pkl\" Not Found")
+                return []
+    
+    
+    print("Search Latents  |  Searching for Latents...", end="\r")
+    max_workers = (os.cpu_count() or 1) * 8
+    
+    def load_pickle_file(layer_index, batch_index):
+        with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}_batch_{batch_index}.pkl", "rb") as f:
+            data = pickle.load(f)
+        return layer_index, batch_index, data
+    all_decoded_sequences = [[] for _ in range(12)]
+    loaded_data = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        tasks = [(layer, batch) for layer in range(12) for batch in range(8)]
+        future_to_task = {executor.submit(load_pickle_file, layer, batch): (layer, batch) for layer, batch in tasks}
+        for future in concurrent.futures.as_completed(future_to_task):
+            layer_index, batch_index, data = future.result()
+            loaded_data[(layer_index, batch_index)] = data
+    for layer_index in range(12):
+        for batch_index in range(8):
+            data = loaded_data.get((layer_index, batch_index))
+            if data is not None:
+                all_decoded_sequences[layer_index].extend(data)
+            else:
+                print(f"Search Latents  |  Error: Decoded Sequences Layer {layer_index} Batch {batch_index} Not Found")
+                return []
+    
+    tokenizer = get_tokenizer()
+    tokens_from_sequence_h5_file = h5py.File(f"{latent_data_path}/latents_sae_tokens_from_sequence.h5", 'r')
+    def search_layer_latents(layer_index, results, all_decoded_sequences, tokens_from_sequence_h5_file):
+        df = pd.DataFrame({'text': all_decoded_sequences[layer_index] })
+        for i, search_word in enumerate(search_words):
+            if i == 0:
+                df["relevance"] = df['text'].str.count(search_word)
+            else:
+                df["relevance"] += df['text'].str.count(search_word)
+        search_words_frequencies = torch.tensor(df['relevance'].values, dtype=torch.int16)
         sorted_indices = torch.argsort(search_words_frequencies, descending=True)
         
-        for latent_index in sorted_indices[:4]:
+        sorted_indices_sorted, original_order_indices = torch.sort(sorted_indices[:4])
+        latent_sequences_tokens = torch.from_numpy(tokens_from_sequence_h5_file['tensor'][layer_index, sorted_indices_sorted, :3, 1:])[original_order_indices]
+        for i, latent_index in enumerate(sorted_indices[:4]):
             new_result = { "layer": layer_index, "latent": latent_index.item(), "relevance": search_words_frequencies[latent_index].item(), "topSequencePreviews": [] }
-            new_result["topSequencePreviews"] = [{ "decoded": decoded_sequences[latent_index*10+top_sequence_index] } for top_sequence_index in range(4)]
+            new_result["topSequencePreviews"] = [{ "decoded": decoded } for decoded in tokenizer.batch_decode(latent_sequences_tokens[i])]
             results.append(new_result)
-        
-        duration = time.time() - start_time
-        print(f"Searched Layer {str(layer_index+1).zfill(len(str(12)))}  |  Duration: {duration:.2f}s  |  Top Latents: {', '.join([str(str(i.item() + 1) + ' (f' + str(search_words_frequencies[i].item()) + ')') for i in sorted_indices[:6]])}")
-        
-    print("Searching for Latents...", end="\r")
-    with ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(search_layer_latents, layer_index, results)
+            executor.submit(search_layer_latents, layer_index, results, all_decoded_sequences, tokens_from_sequence_h5_file)
             for layer_index in range(12)
         ]
-        for future in futures:
-            future.result()    
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                print(f'Search Latents  |  Error: {e}')
+        
+    print(f"Search Latents  |  Searched Latents  |  Duration: {time.time()-start_time:.2f}s")
         
     results = [result for result in results if result["relevance"] > 0]
-        
     def sortResultsFunction(result):
         return result["relevance"]
     results.sort(reverse=True, key=sortResultsFunction)
-    
     return results
-    
-    
-    
-    
-# def get_sequence_embedding_results(search_prompt, latent_data_path):
-#     results = []
-    
-#     # Sentence Encoder Model
-#     # text_encoder_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-#     # text_encoder_model = SentenceTransformer('sentence-transformers/msmarco-distilbert-base-v3')
-#     # text_encoder_model = SentenceTransformer('sentence-transformers/all-roberta-large-v1')
-#     text_encoder_model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
-#     text_encoder_model = text_encoder_model.to(device)
-#     print("Search Prompt: ", search_prompt)
-#     search_prompt_embedding = text_encoder_model.encode(search_prompt, device=device)
-#     search_prompt_embedding = torch.tensor(search_prompt_embedding, device=device)
-#     embedding_dim = search_prompt_embedding.shape[-1]
-#     del text_encoder_model
-#     torch.cuda.empty_cache()
-    
-#     tokenizer = get_tokenizer()
-    
-#     sequence_embeddings_path = latent_data_path + "/sequence_embeddings_all-mpnet-base-v2"
-#     latent_data_sequence_embedding_dir_list = os.listdir(sequence_embeddings_path)
-#     for layer_index in range(12):
-#         name = f"sequence_embeddings_layer_{layer_index}"
-#         if f"{name}.pt" not in latent_data_sequence_embedding_dir_list:
-#             if f"{name}.h5" not in latent_data_sequence_embedding_dir_list:
-#                 return jsonify({ 'message': f'File Not Found: {name}.h5' })
-#             print(f"Creating {sequence_embeddings_path}/{name}.pt...")
-#             with h5py.File(f"{sequence_embeddings_path}/{name}.h5", 'r') as hdf5_file:
-#                 dataset_list = [torch.tensor(dataset[()]) for key, dataset in hdf5_file.items()]
-#             sequence_embeddings = torch.cat(dataset_list, dim=0).view(40960, 10, embedding_dim).to(device)
-#             torch.save(sequence_embeddings, f"{sequence_embeddings_path}/{name}.pt")
-#         else:
-#             sequence_embeddings = torch.load(f"{sequence_embeddings_path}/{name}.pt").to(device)
-    
-#         cosine_similarities = util.cos_sim(search_prompt_embedding, sequence_embeddings.view(-1, embedding_dim))[0].view(40960, 10)
-#         # latent_cosine_values, _ = cosine_similarities.max(dim=1)
-#         latent_cosine_values = cosine_similarities.mean(dim=1)
-#         sorted_indices = torch.argsort(latent_cosine_values, descending=True)
-#         if layer_index == 0:
-#             print(cosine_similarities[1], sorted_indices.tolist().index(1))
-        
-#         for latent_index in sorted_indices[:8]:
-#             new_result = { "layer": layer_index, "latent": latent_index.item(), "relevance": latent_cosine_values[latent_index].item(), "topSequencePreviews": [] }
-#             with h5py.File(f"{latent_data_path}/latents_sae_tokens_from_sequence.h5", 'r') as h5f:
-#                 topSequencesTokens = [sequence.tolist()[1:] for sequence in np.asarray(h5f['tensor'][layer_index, latent_index, :, :])]
-#             with h5py.File(f"{latent_data_path}/latents_sae_values_from_sequence.h5", 'r') as h5f:
-#                 topSequencesValues = [sequence.tolist()[1:] for sequence in np.asarray(h5f['tensor'][layer_index, latent_index, :, :])]
-#             top_sequences_list = get_top_sequences_list(torch.tensor(topSequencesTokens[:5]), torch.tensor(topSequencesValues[:5]), tokenizer)
-#             for top_sequence_list in top_sequences_list:
-#                 new_result["topSequencePreviews"].append({ "tokens": [], "values": [] })
-#                 new_result["topSequencePreviews"][-1]["tokens"] = [pairs[0] for pairs in top_sequence_list[1:]]
-#                 new_result["topSequencePreviews"][-1]["values"] = [pairs[1] for pairs in top_sequence_list[1:]]
-#             results.append(new_result)
-#         print(f"Searched Layer {layer_index+1} / 12")
-        
-        
-#     def sortResultsFunction(result):
-#         return result["relevance"]
-
-#     results.sort(reverse=True, key=sortResultsFunction)
-        
-#     return results
 
 
 

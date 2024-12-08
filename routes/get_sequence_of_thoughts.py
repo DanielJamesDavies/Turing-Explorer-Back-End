@@ -52,7 +52,7 @@ def get_sequence_of_thoughts():
     if not os.path.exists(sae_path):
         return jsonify({ 'message': 'Failure' })
     
-    print("Getting Sequences of Thoughts  |  Turing Inference...", end="\r")
+    print("Get Sequences of Thoughts  |  Turing Inference...", end="\r")
     _, _, latents = current_app.config["turing_llm"].generate(tokens[2:], max_length=max_length, tokenize=False, collect_latents=True)
     
     latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True, map_location=torch.device('cpu')).cpu()
@@ -92,7 +92,7 @@ def get_sequence_of_thoughts():
             torch.cuda.synchronize()
     else:
         def get_sae_top_features(layer_index, layer_latents, sae_model, all_top_indices, all_top_values):
-            print(f"Getting Sequences of Thoughts  |  Layer {layer_index+1}  |  Processing...", end="\r")
+            print(f"Get Sequences of Thoughts  |  Layer {layer_index+1}  |  Processing...", end="\r")
             layer_latents = layer_latents[0][-1].to(device)
             layer_sae_latents, _, _ = sae_model.encode(layer_latents)
             layer_sae_latents = layer_sae_latents * latents_sae_frequencies_mask[layer_index].to(device)
@@ -132,10 +132,10 @@ def get_sequence_of_thoughts():
     latent_relationships = Counter()
     top_other_latents_dir_list = [folder for folder in os.listdir(latent_data_path + "/top_other_latents") if ".txt" not in folder]
     for folder_index, post_from_sequence_latent_data_folder in enumerate(top_other_latents_dir_list):
-        print(f"Getting Sequences of Thoughts  |  Folder {folder_index+1}  |  Processing...          ", end="\r") # latents_other_sae_latent_indices_avg_sequence_adj || latents_other_sae_latent_indices_top_token_adj
+        print(f"Get Sequences of Thoughts  |  Folder {folder_index+1}  |  Processing...          ", end="\r") # latents_other_sae_latent_indices_avg_sequence_adj || latents_other_sae_latent_indices_top_token_adj
         other_latents_h5_file = h5py.File(f"{latent_data_path}/top_other_latents/{post_from_sequence_latent_data_folder}/latents_other_sae_latent_indices_avg_sequence_adj.h5")
         for top_latents_layer_index, top_latents_layer in enumerate(top_latents):
-            print(f"Getting Sequences of Thoughts  |  Folder {folder_index+1}  |  Processing Layer {top_latents_layer_index+1}...          ", end="\r")
+            print(f"Get Sequences of Thoughts  |  Folder {folder_index+1}  |  Processing Layer {top_latents_layer_index+1}...          ", end="\r")
             for latent_dict in top_latents_layer:
                 for layer_index in range(12):
                     try:
