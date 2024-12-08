@@ -1,12 +1,14 @@
-# Turing-LLM Explorer
+# Turing Explorer
 
-Welcome to Turing-LLM Explorer! 😄
+Welcome to Turing Explorer! 😄
 
 A mechanistic interpretability tool to understand the internals of Turing-LLM, a large language model.
 
 Please feel free to contact me using my email for any queries or for a chat 🙂: danieljamesdavies12@gmail.com
 
-## How to Use
+Live on: https://turingexplorer.com
+
+## Local Use
 
 First, download the files for this app by doing the following:
 

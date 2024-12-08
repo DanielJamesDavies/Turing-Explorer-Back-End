@@ -1,9 +1,0 @@
-.inference-page {
-	display: flex;
-	flex-direction: column;
-	margin: 0 auto;
-	padding-bottom: 32px !important;
-	width: calc(100dvw - 2 * 6px);
-	max-width: 1200px;
-	height: 100%;
-}
