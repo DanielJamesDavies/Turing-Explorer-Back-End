@@ -76,7 +76,7 @@ def get_latent_top_sequences_tokens(layer, latent, latent_data_path, latent_data
     if "latents_sae_tokens_from_sequence.h5" not in latent_data_dir_list:
         print("Error: File \"latents_sae_tokens_from_sequence.h5\" Not Found")
     with h5py.File(f"{latent_data_path}/latents_sae_tokens_from_sequence.h5", 'r') as h5f:
-        latent_sequences_tokens = torch.from_numpy(h5f['tensor'][layer, latent, :, :])
+        latent_sequences_tokens = torch.from_numpy(h5f['tensor'][layer, latent, :24, :])
     return latent_sequences_tokens
 
 
@@ -87,7 +87,7 @@ def get_latent_top_sequences_values(layer, latent, latent_data_path, latent_data
     if "latents_sae_values_from_sequence.h5" not in latent_data_dir_list:
         print("Error: File \"latents_sae_values_from_sequence.h5\" Not Found")
     with h5py.File(f"{latent_data_path}/latents_sae_values_from_sequence.h5", 'r') as h5f:
-        latent_sequences_values = torch.from_numpy(h5f['tensor'][layer, latent, :, :])
+        latent_sequences_values = torch.from_numpy(h5f['tensor'][layer, latent, :24, :])
     return latent_sequences_values
 
 
