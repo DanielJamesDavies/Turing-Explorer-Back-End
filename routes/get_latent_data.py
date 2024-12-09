@@ -1,13 +1,13 @@
 from flask import Blueprint, request, jsonify, Response
 import os
+import time
 import logging
 import torch
 import json
 import h5py
 import pandas as pd
 from transformers import AutoTokenizer
-import pickle
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 
 
 
@@ -193,16 +193,6 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
     top_frequency_threshold = 2000000
     latents_sae_frequencies = torch.load(f"{latent_data_path}/latents_sae_frequencies.pth", weights_only=True, map_location=torch.device('cpu')).cpu()
     
-    print("Get Latent Data  |  Getting Decoded Sequences...                                             ", end="\r")
-    all_decoded_sequences = {}
-    def get_decoded_sequences(i):
-        with open(f"{latent_data_path}/decoded_sequences/layer_{i}.pkl", "rb") as f:
-            all_decoded_sequences[str(i)] = pickle.load(f)
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(get_decoded_sequences, i) for i in range(num_layers)]
-        for future in futures:
-            future.result()
-    
     print("Get Latent Data  |  Getting Top Other Latents...                                             ", end="\r")
     for top_other_latents_h5_filename in top_other_latents_h5_filenames:
         top_other_latents[top_other_latents_h5_filename] = [False for _ in range(num_layers)]
@@ -216,13 +206,9 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
                 top_other_latents[top_other_latents_h5_filename][layer_index], h5_file = get_top_other_latents_layer(top_other_latents_h5_filename, layer, latent, layer_index, 0, latent_data_path, other_latents_dir_list)
             top_other_latents[top_other_latents_h5_filename][layer_index] = top_other_latents[top_other_latents_h5_filename][layer_index] + (sae_dim / 2)
             top_other_latents[top_other_latents_h5_filename][layer_index] = top_other_latents[top_other_latents_h5_filename][layer_index].tolist()
-            # top_other_latents[top_other_latents_h5_filename][layer_index] = [
-            #     [ { "layer": int(layer_index), "latent": int(j), "topSequences": [sequence for sequence in all_decoded_sequences[str(layer_index)][int(j*10):int(j*10)+2]] } for j in latents_list]
-            #     for latents_list in top_other_latents[top_other_latents_h5_filename][layer_index]
-            # ]
             top_other_latents[top_other_latents_h5_filename][layer_index] = [
-                [ { "layer": int(layer_index), "latent": int(j), "topSequences": [] } for j in latents_list]
-                for latents_list in top_other_latents[top_other_latents_h5_filename][layer_index]
+                [ { "layer": int(layer_index), "latent": int(j) } for j in latents_list]
+                for latents_list in top_other_latents[top_other_latents_h5_filename][layer_index][:24]
             ]
             
             layer_latents_sae_frequencies = latents_sae_frequencies[layer_index]
@@ -231,16 +217,52 @@ def get_post_from_sequence_latent_data(layer, latent, latent_data_path, latent_d
                     if frequencies[int(latent["latent"])] >= top_frequency_threshold:
                         return False
                     return True
-                top_other_latents[top_other_latents_h5_filename + "_rare"][layer_index][i] = list(filter(filterFunction, top_other_latents[top_other_latents_h5_filename][layer_index][i]))
+                top_other_latents[top_other_latents_h5_filename + "_rare"][layer_index][i] = list(filter(filterFunction, top_other_latents[top_other_latents_h5_filename][layer_index][i]))[:16]
                 
     del latents_sae_frequencies
-    print("Get Latent Data  |  Done                                                                         ")
+    
+    top_other_latent_previews = []
+    deduplicated_top_other_latents = []
+    tokens_from_sequence_h5_file = h5py.File(f"{latent_data_path}/latents_sae_tokens_from_sequence.h5", 'r')
+    df = None
+    for top_other_latents_h5_filename in top_other_latents_h5_filenames:
+        for layer_index in range(num_layers):
+            if df is None:
+                df = pd.DataFrame([latent for sublist in top_other_latents[top_other_latents_h5_filename][layer_index] for latent in sublist])
+            else:
+                df2 = pd.DataFrame([latent for sublist in top_other_latents[top_other_latents_h5_filename][layer_index] for latent in sublist])
+                df = pd.concat([df, df2], axis=0, ignore_index=True)
+    df = df.drop_duplicates()
+    df = df.sort_values(by=['layer', 'latent'], ascending=[True, True]).reset_index(drop=True)
+    top_other_latent_previews = [[] for _ in range(12)]
+    def get_layer_previews(layer_index, latent_values, tokens_from_sequence_h5_file, top_other_latent_previews):
+        latent_sequences_tokens = torch.from_numpy(tokens_from_sequence_h5_file['tensor'][layer_index, latent_values, :2, 1:])
+        decoded_sequences = tokenizer.batch_decode(latent_sequences_tokens.view(-1, latent_sequences_tokens.size(-1)).cpu().tolist())
+        for i, latent_value in enumerate(latent_values):
+            top_other_latent_previews[layer_index].append({ 
+                "layer": layer_index,
+                "latent": latent_value,
+                "topSequences": decoded_sequences[i*latent_sequences_tokens.size(1):(i + 1)*latent_sequences_tokens.size(1)]
+            })
+    max_workers = (os.cpu_count() or 1) * 8
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(get_layer_previews, layer_index, df[df['layer'] == layer_index]['latent'], tokens_from_sequence_h5_file, top_other_latent_previews)
+            for layer_index in range(num_layers)
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                print(f'Search Latents  |  Error: {e}')
 
+    print("Get Latent Data  |  Done                                                                         ")
     yield {
         "final": True,
         "layerUnembedTokenFrequencies": None,
         "outputTokenFrequencies": None,
-        "topOtherLatents": top_other_latents
+        "topOtherLatents": top_other_latents,
+        "topOtherLatentPreviews": top_other_latent_previews
     }
 
 
