@@ -96,9 +96,9 @@ def get_keyword_match_results(search_prompt, latent_data_path):
         search_words_frequencies = torch.tensor(df['relevance'].values, dtype=torch.int16)
         sorted_indices = torch.argsort(search_words_frequencies, descending=True)
         
-        sorted_indices_sorted, original_order_indices = torch.sort(sorted_indices[:4])
-        latent_sequences_tokens = torch.from_numpy(tokens_from_sequence_h5_file['tensor'][layer_index, sorted_indices_sorted, :3, 1:])[original_order_indices]
-        for i, latent_index in enumerate(sorted_indices[:4]):
+        sorted_indices_sorted, _ = torch.sort(sorted_indices[:4])
+        latent_sequences_tokens = torch.from_numpy(tokens_from_sequence_h5_file['tensor'][layer_index, sorted_indices_sorted, :3, 1:])
+        for i, latent_index in enumerate(sorted_indices_sorted[:4]):
             new_result = { "layer": layer_index, "latent": latent_index.item(), "relevance": search_words_frequencies[latent_index].item(), "topSequencePreviews": [] }
             new_result["topSequencePreviews"] = [{ "decoded": decoded } for decoded in tokenizer.batch_decode(latent_sequences_tokens[i])]
             results.append(new_result)
