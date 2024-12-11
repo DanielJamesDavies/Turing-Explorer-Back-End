@@ -25,7 +25,7 @@ def inference():
     
     torch.cuda.empty_cache()
     
-    inference_id = data.get(inference_id, str(uuid.uuid4()))
+    inference_id = data.get("inference_id", str(uuid.uuid4()))
     
     print("Inference  |  Running Turing-LLM...", end="\r")
     start_time = time.time()
