@@ -19,13 +19,13 @@ def inference():
     
     tokenizer = Tokenizer()
     tokens = tokenizer.encode(prompt)
-    if len(tokens) > 1000:
-        tokens = tokens[:1000]
-    max_length = len(tokens)+2+(800 if current_app.config["device"] == "cuda" else 128)
+    if len(tokens) > 768:
+        tokens = tokens[:768]
+    max_length = len(tokens)+2+(768 if current_app.config["device"] == "cuda" else 128)
     
     torch.cuda.empty_cache()
     
-    inference_id = str(uuid.uuid4())
+    inference_id = data.get(inference_id, str(uuid.uuid4()))
     
     print("Inference  |  Running Turing-LLM...", end="\r")
     start_time = time.time()
