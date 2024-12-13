@@ -5,6 +5,8 @@ from dataclasses import dataclass
 import time
 import os
 import torch
+import pandas as pd
+import pickle
 from concurrent.futures import ThreadPoolExecutor
 
 from routes.get_latent_data import get_latent_data_bp
@@ -70,6 +72,43 @@ else:
         for future in futures:
             future.result()
     print(f"Loaded SAEs in {time.time()-sae_load_start_time:.2f}s")
+    
+    
+    
+    
+def get_decoded_sequences():
+    try:
+        start_time = time.time()
+        print("Loading Decoded Sequences...", end="\r")
+        os.makedirs("./latent_data/decoded_sequences", exist_ok=True)
+        decoded_dir_list = os.listdir("./latent_data/decoded_sequences")
+        for layer_index in range(12):
+            for i in range(8):
+                if f"layer_{layer_index}_batch_{i}.pkl" not in decoded_dir_list:
+                    print("Error: File \"decoded_sequences/layer_{layer_index}_batch_{i}.pkl\" Not Found")
+                    return None
+        def get_layer_results(layer_index, batch_index, all_dfs):
+            with open(f"./latent_data/decoded_sequences/layer_{layer_index}_batch_{batch_index}.pkl", "rb") as f:
+                layer_decoded_sequences = pickle.load(f)
+            latent_offset = batch_index * (40960 // 8)
+            latent_range = range(latent_offset, (batch_index+1) * (40960 // 8))
+            df = pd.DataFrame({'id': [f"{layer_index}-{i+latent_offset}" for i in latent_range], 'layer': layer_index, 'latent': list(latent_range), 'text': layer_decoded_sequences})
+            all_dfs[layer_index][batch_index] = df
+        max_workers = (os.cpu_count() or 1)
+        all_dfs = [[None for j in range(8)] for i in range(12)]
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(get_layer_results, layer_index, batch_index, all_dfs)
+                for batch_index in range(8) for layer_index in range(12)
+            ]
+            for future in futures:
+                future.result()
+        print(f"Loaded Decoded Sequences in {time.time()-start_time:.2f}s")
+        return pd.concat([df for sublist in all_dfs for df in sublist], ignore_index=True)
+    except:
+        return None
+    
+app.config["decoded_sequences"] = get_decoded_sequences()
 
 
 

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 import time
 import pickle
@@ -54,33 +54,10 @@ def get_keyword_match_results(search_prompt, latent_data_path):
     
     os.makedirs(f"{latent_data_path}/decoded_sequences", exist_ok=True)
     decoded_dir_list = os.listdir(f"{latent_data_path}/decoded_sequences")
-
-    for layer_index in range(12):
-        for i in range(8):
-            if f"layer_{layer_index}_batch_{i}.pkl" not in decoded_dir_list:
-                print("Error: File \"decoded_sequences/layer_{layer_index}_batch_{i}.pkl\" Not Found")
-                return []
     
-    print("Search Latents  |  Loading Decoded Sequences...", end="\r")
-    start_time_load_decoded_sequences = time.time()
-    def get_layer_results(layer_index, batch_index, all_dfs):
-        with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}_batch_{batch_index}.pkl", "rb") as f:
-            layer_decoded_sequences = pickle.load(f)
-        latent_offset = batch_index * (40960 // 8)
-        latent_range = range(latent_offset, (batch_index+1) * (40960 // 8))
-        df = pd.DataFrame({'id': [f"{layer_index}-{i+latent_offset}" for i in latent_range], 'layer': layer_index, 'latent': list(latent_range), 'text': layer_decoded_sequences})
-        all_dfs[layer_index][batch_index] = df
-    max_workers = (os.cpu_count() or 1)
-    all_dfs = [[None for j in range(8)] for i in range(12)]
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(get_layer_results, layer_index, batch_index, all_dfs)
-            for batch_index in range(8) for layer_index in range(12)
-        ]
-        for future in concurrent.futures.as_completed(futures):
-            future.result()
-    df = pd.concat([df for sublist in all_dfs for df in sublist], ignore_index=True)
-    print(f"Search Latents  |  Loaded Decoded Sequences  |  Duration: {time.time()-start_time_load_decoded_sequences:.2f}s")
+    if current_app.config["decoded_sequences"] is None:
+        return []
+    df = current_app.config["decoded_sequences"].copy()
     
     print("Search Latents  |  Getting Latent Relevances...", end="\r")
     start_time_get_latent_relevances = time.time()
