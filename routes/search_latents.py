@@ -8,6 +8,8 @@ import torch
 from transformers import AutoTokenizer
 import pandas as pd
 import concurrent.futures
+import swifter
+import json
 
 
 
@@ -59,62 +61,57 @@ def get_keyword_match_results(search_prompt, latent_data_path):
                 print("Error: File \"decoded_sequences/layer_{layer_index}_batch_{i}.pkl\" Not Found")
                 return []
     
-    
-    print("Search Latents  |  Searching for Latents...", end="\r")
-    max_workers = (os.cpu_count() or 1) * 8
-    
-    def load_pickle_file(layer_index, batch_index):
+    print("Search Latents  |  Loading Decoded Sequences...", end="\r")
+    start_time_load_decoded_sequences = time.time()
+    def get_layer_results(layer_index, batch_index, all_dfs):
         with open(f"{latent_data_path}/decoded_sequences/layer_{layer_index}_batch_{batch_index}.pkl", "rb") as f:
-            data = pickle.load(f)
-        return layer_index, batch_index, data
-    all_decoded_sequences = [[] for _ in range(12)]
-    loaded_data = {}
+            layer_decoded_sequences = pickle.load(f)
+        latent_offset = batch_index * (40960 // 8)
+        latent_range = range(latent_offset, (batch_index+1) * (40960 // 8))
+        df = pd.DataFrame({'id': [f"{layer_index}-{i+latent_offset}" for i in latent_range], 'layer': layer_index, 'latent': list(latent_range), 'text': layer_decoded_sequences})
+        all_dfs[layer_index][batch_index] = df
+    max_workers = (os.cpu_count() or 1)
+    all_dfs = [[None for j in range(8)] for i in range(12)]
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        tasks = [(layer, batch) for layer in range(12) for batch in range(8)]
-        future_to_task = {executor.submit(load_pickle_file, layer, batch): (layer, batch) for layer, batch in tasks}
-        for future in concurrent.futures.as_completed(future_to_task):
-            layer_index, batch_index, data = future.result()
-            loaded_data[(layer_index, batch_index)] = data
-    for layer_index in range(12):
-        for batch_index in range(8):
-            data = loaded_data.get((layer_index, batch_index))
-            if data is not None:
-                all_decoded_sequences[layer_index].extend(data)
-            else:
-                print(f"Search Latents  |  Error: Decoded Sequences Layer {layer_index} Batch {batch_index} Not Found")
-                return []
+        futures = [
+            executor.submit(get_layer_results, layer_index, batch_index, all_dfs)
+            for batch_index in range(8) for layer_index in range(12)
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            future.result()
+    df = pd.concat([df for sublist in all_dfs for df in sublist], ignore_index=True)
+    print(f"Search Latents  |  Loaded Decoded Sequences  |  Duration: {time.time()-start_time_load_decoded_sequences:.2f}s")
+    
+    print("Search Latents  |  Getting Latent Relevances...", end="\r")
+    start_time_get_latent_relevances = time.time()
+    for i, search_word in enumerate(search_words):
+        if i == 0:
+            df["relevance"] = df['text'].swifter.apply(lambda x: x.count(search_word))
+        else:
+            df["relevance"] += df['text'].swifter.apply(lambda x: x.count(search_word))
+    print(f"Search Latents  |  Got Latent Relevances     |  Duration: {time.time()-start_time_get_latent_relevances:.2f}s")
+
+    df = df.drop(columns=['text']).sort_values('relevance', ascending=False).drop_duplicates(subset='id', keep='first')
+    top_50 = df.head(50)
+    layer_results = []
+    for layer in df['layer'].unique():
+        layer_df = df[df['layer'] == layer].head(4)
+        layer_results.append(layer_df)
+    layer_df = pd.concat(layer_results)
+    final_df = pd.concat([top_50, layer_df]).drop_duplicates(subset='id', keep='first')
+    results = json.loads(final_df.sort_values('latent', ascending=True).to_json(orient='records'))
     
     tokenizer = get_tokenizer()
     tokens_from_sequence_h5_file = h5py.File(f"{latent_data_path}/latents_sae_tokens_from_sequence.h5", 'r')
-    def search_layer_latents(layer_index, results, all_decoded_sequences, tokens_from_sequence_h5_file):
-        df = pd.DataFrame({'text': all_decoded_sequences[layer_index] })
-        for i, search_word in enumerate(search_words):
-            if i == 0:
-                df["relevance"] = df['text'].str.count(search_word)
-            else:
-                df["relevance"] += df['text'].str.count(search_word)
-        search_words_frequencies = torch.tensor(df['relevance'].values, dtype=torch.int16)
-        sorted_indices = torch.argsort(search_words_frequencies, descending=True)
+    for layer_index in range(12):
+        layer_items = [[i, item] for i, item in enumerate(results) if item["layer"] == layer_index]
+        latent_sequences_tokens = torch.from_numpy(tokens_from_sequence_h5_file['tensor'][layer_index, [item[1]["latent"] for item in layer_items], :3, 1:])
+        for i, item_pair in enumerate(layer_items):
+            results[item_pair[0]]["topSequencePreviews"] = [{ "decoded": decoded } for decoded in tokenizer.batch_decode(latent_sequences_tokens[i])]
+    
+    
         
-        sorted_indices_sorted, _ = torch.sort(sorted_indices[:4])
-        latent_sequences_tokens = torch.from_numpy(tokens_from_sequence_h5_file['tensor'][layer_index, sorted_indices_sorted, :3, 1:])
-        for i, latent_index in enumerate(sorted_indices_sorted[:4]):
-            new_result = { "layer": layer_index, "latent": latent_index.item(), "relevance": search_words_frequencies[latent_index].item(), "topSequencePreviews": [] }
-            new_result["topSequencePreviews"] = [{ "decoded": decoded } for decoded in tokenizer.batch_decode(latent_sequences_tokens[i])]
-            results.append(new_result)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(search_layer_latents, layer_index, results, all_decoded_sequences, tokens_from_sequence_h5_file)
-            for layer_index in range(12)
-        ]
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                print(f'Search Latents  |  Error: {e}')
-        
-    print(f"Search Latents  |  Searched Latents  |  Duration: {time.time()-start_time:.2f}s")
-        
+    print(f"Search Latents  |  Searched Latents          |  Duration: {time.time()-start_time:.2f}s")
     results = [result for result in results if result["relevance"] > 0]
     def sortResultsFunction(result):
         return result["relevance"]
