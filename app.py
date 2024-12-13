@@ -10,6 +10,7 @@ import pickle
 from concurrent.futures import ThreadPoolExecutor
 
 from routes.get_latent_data import get_latent_data_bp
+from routes.get_latent_preview import get_latent_preview_bp
 from routes.search_latents import search_latents_bp
 from routes.inference import inference_bp
 from routes.get_sequence_of_thoughts import get_sequence_of_thoughts_bp
@@ -130,6 +131,7 @@ def test():
 
 
 app.register_blueprint(get_latent_data_bp)
+app.register_blueprint(get_latent_preview_bp)
 app.register_blueprint(search_latents_bp)
 app.register_blueprint(inference_bp)
 app.register_blueprint(get_sequence_of_thoughts_bp)
